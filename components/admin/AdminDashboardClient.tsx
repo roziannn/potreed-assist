@@ -141,9 +141,6 @@ export function AdminDashboardClient() {
                 Ringkasan interaksi calon client
               </h2>
             </div>
-            <p className="max-w-xl text-sm leading-6 text-slate-500">
-              Data ini masih memakai mock analytics supaya alur dashboard dan insight yang dibutuhkan sudah bisa dipakai untuk review UX dan kebutuhan backend berikutnya.
-            </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

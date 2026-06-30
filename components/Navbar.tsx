@@ -5,7 +5,6 @@ import {
   Aperture,
   CalendarDays,
   FolderHeart,
-  LayoutDashboard,
   MessageSquareQuote,
   WalletCards,
 } from "lucide-react";

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { LayoutDashboard, LogOut, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { AdminDashboardNav } from "@/components/admin/AdminDashboardNav";
 import { requireAdminSession } from "@/lib/auth";

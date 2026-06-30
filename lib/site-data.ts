@@ -14,6 +14,16 @@ export type Testimonial = {
   rating: number;
 };
 
+export type BookingItem = {
+  client: string;
+  eventType: "Wedding" | "Wisuda" | "Custom";
+  packageName: string;
+  eventDate: string;
+  status: "Pending" | "Confirmed" | "Follow Up";
+  budget: string;
+  notes: string;
+};
+
 export const servicePackages: ServicePackage[] = [
   {
     name: "Wisuda Essential",
@@ -161,4 +171,34 @@ export const budgetRanges = [
   { label: "Rp3jt - Rp7jt", share: "42%" },
   { label: "Rp7jt - Rp12jt", share: "19%" },
   { label: "> Rp12jt", share: "8%" },
+];
+
+export const bookingItems: BookingItem[] = [
+  {
+    client: "Nadya & Fikri",
+    eventType: "Wedding",
+    packageName: "Wedding Luxury",
+    eventDate: "12 Juli 2026",
+    status: "Confirmed",
+    budget: "Rp12.500.000",
+    notes: "Sudah DP 50%, minta tone hangat dan candid keluarga.",
+  },
+  {
+    client: "Raisa Putri",
+    eventType: "Wisuda",
+    packageName: "Wisuda Signature",
+    eventDate: "20 Juli 2026",
+    status: "Pending",
+    budget: "Rp3.250.000",
+    notes: "Masih menunggu final konfirmasi jadwal kampus dan jumlah keluarga.",
+  },
+  {
+    client: "Aldo Creative",
+    eventType: "Custom",
+    packageName: "Custom Event",
+    eventDate: "2 Agustus 2026",
+    status: "Follow Up",
+    budget: "Mulai Rp4.500.000",
+    notes: "Perlu follow up untuk kebutuhan moodboard dan lokasi studio.",
+  },
 ];
