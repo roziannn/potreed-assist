@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Navbar } from "@/components/Navbar";
 import { FloatingChat } from "@/components/FloatingChat";
+import { bookingItems } from "@/lib/site-data";
 
 export default function SchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -12,14 +13,26 @@ export default function SchedulePage() {
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
+  const maxBookingsPerDate = 2;
 
-  // Data Dummy Fullbooked: 
-  // Juni (month 5) full, Agustus (month 7) tanggal 10-15
+  const bookingsByDate = bookingItems.reduce<Record<string, number>>((acc, item) => {
+    acc[item.eventDate] = (acc[item.eventDate] ?? 0) + 1;
+    return acc;
+  }, {});
+
   const isFullBooked = (d: number, m: number, y: number) => {
-    if (m === 5 && y === 2026) return true; 
-    if (m === 7 && y === 2026 && d >= 10 && d <= 15) return true;
-    return false;
+    const dateText = new Date(y, m, d).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    return (bookingsByDate[dateText] ?? 0) >= maxBookingsPerDate;
   };
+
+  const fullDates = Object.entries(bookingsByDate).filter(
+    ([, count]) => count >= maxBookingsPerDate
+  );
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfMonth = new Date(year, month, 1).getDay();

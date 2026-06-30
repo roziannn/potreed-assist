@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCheck2, ClipboardList, Plus } from "lucide-react";
+import { CalendarCheck2, CalendarDays, ChevronLeft, ChevronRight, ClipboardList, Plus, X } from "lucide-react";
 import { bookingItems } from "@/lib/site-data";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
 
 export function BookingManagerSection() {
   const [selectedBookingClient, setSelectedBookingClient] = useState(
@@ -48,15 +49,156 @@ export function BookingManagerSection() {
     setBudget("");
     setNotes("");
   };
+  const [showModal, setShowModal] = useState(false);
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  
+  const [selectedDate, setSelectedDate] = useState<number | null>(null);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const [sessionLimit, setSessionLimit] = useState(2);
+
+  const bookingsByDate = bookingItems.reduce<Record<string, number>>((acc, item) => {
+    acc[item.eventDate] = (acc[item.eventDate] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const isFullBooked = (d: number, m: number, y: number) => {
+  const dateText = new Date(y, m, d).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  return (bookingsByDate[dateText] ?? 0) >= sessionLimit;
+};
+const fullDates = Object.entries(bookingsByDate).filter(
+  ([, count]) => count >= sessionLimit
+);
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfMonth = new Date(year, month, 1).getDay();
+
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
+
+  const [filter, setFilter] = useState<'all' | 'weekend' | 'weekday'>('all'); 
 
   return (
     <section className="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_100px_-52px_rgba(34,197,94,0.24)] backdrop-blur-xl">
-      <div className="mb-6">
+   <div className="mb-6 flex items-center justify-between gap-4">
+      <div>
         <p className="text-sm font-medium text-emerald-700">Booking manager</p>
         <h2 className="text-2xl font-bold tracking-tight text-slate-900">
           Kelola booking yang masuk dan follow up client
         </h2>
       </div>
+
+      <Dialog>
+        <DialogTrigger asChild>
+        <Button variant="outline" className="rounded-full gap-2 shrink-0">
+          <CalendarDays className="size-4" /> Lihat Kalender
+        </Button>
+      </DialogTrigger>
+        <DialogContent className="sm:max-w-md rounded-[2rem] p-6">
+       <DialogHeader>
+  {/* Baris 1: Navigasi Bulan */}
+  <div className="flex items-center justify-between px-2 mb-4">
+    <DialogTitle className="text-lg font-bold text-slate-800">
+      {currentDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' })}
+    </DialogTitle>
+    <div className="flex gap-1">
+      <Button variant="ghost" size="icon" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>
+        <ChevronLeft className="w-4 h-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>
+        <ChevronRight className="w-4 h-4" />
+      </Button>
+    </div>
+  </div>
+
+  <div className="space-y-4 mb-6 border-b pb-6">
+    {/* Limit sesi */}
+    <div className="flex items-center justify-between px-2">
+      <span className="text-xs font-medium text-slate-500">Limit sesi harian bulan ini:</span>
+      <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-1">
+        <button
+          type="button"
+          onClick={() => setSessionLimit((prev) => Math.max(1, prev - 1))}
+          className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm hover:bg-slate-100 disabled:opacity-40"
+          disabled={sessionLimit <= 1}
+        >−</button>
+        <span className="w-5 text-center text-sm font-semibold text-slate-800">{sessionLimit}</span>
+        <button
+          type="button"
+          onClick={() => setSessionLimit((prev) => Math.min(10, prev + 1))}
+          className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm hover:bg-slate-100 disabled:opacity-40"
+          disabled={sessionLimit >= 10}
+        >+</button>
+      </div>
+    </div>
+
+    {/* Filter Availability */}
+    <div className="flex items-center justify-between px-2">
+      <div className="flex gap-4">
+        <label className="flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer">
+          <input type="radio" checked={filter === 'weekend'} onChange={() => setFilter('weekend')} className="accent-emerald-600" />
+          Hanya Open Weekend
+        </label>
+        <label className="flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer">
+          <input type="radio" checked={filter === 'weekday'} onChange={() => setFilter('weekday')} className="accent-emerald-600" />
+          Hanya Open Weekday
+        </label>
+      </div>
+      <button onClick={() => setFilter('all')} className="text-[10px] text-slate-400 underline">Reset</button>
+    </div>
+
+    {/* Tombol Simpan */}
+    <Button 
+      className="w-full h-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold"
+      onClick={() => alert("Pengaturan berhasil disimpan!")}
+    >
+      Simpan Pengaturan
+    </Button>
+  </div>
+</DialogHeader>
+
+        {/* Header Su-Sa */}
+        <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-400 mb-2">
+          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <div key={d}>{d}</div>)}
+        </div>
+
+        {/* Grid Kalender */}
+        <div className="grid grid-cols-7 gap-1">
+          {blanks.map(b => <div key={`blank-${b}`} />)}
+          {days.map(day => {
+            const full = isFullBooked(day, month, year);
+            return (
+              <div key={day} className="flex flex-col items-center">
+                <button 
+                  disabled={full}
+                  onClick={() => !full && setSelectedDate(day)}
+                  className={`h-9 w-9 flex items-center justify-center rounded-full transition-all font-medium text-sm
+                  ${full ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'hover:bg-blue-100 text-slate-700'}
+                  ${selectedDate === day && !full ? 'bg-blue-600 text-white hover:bg-blue-600' : ''}`}
+                >
+                  {day}
+                </button>
+                
+                {full && (
+                  <span className="text-[9px] font-bold text-red-500 uppercase mt-1 leading-none">
+                    Full
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </DialogContent>
+      </Dialog>
+      </div>
+
 
       <div className="grid gap-6 lg:grid-cols-[minmax(300px,0.9fr)_minmax(0,1.1fr)]">
         <div className="rounded-[1.9rem] border border-emerald-100 bg-emerald-50/50 p-5">
@@ -75,7 +217,6 @@ export function BookingManagerSection() {
               Tambah
             </Button>
           </div>
-
           <div className="space-y-3">
             {bookingItems.map((booking) => {
               const isActive = selectedBookingClient === booking.client;
@@ -211,6 +352,7 @@ export function BookingManagerSection() {
         </div>
       </div>
     </section>
+    
   );
 }
 
@@ -228,3 +370,4 @@ function Field({
     </label>
   );
 }
+

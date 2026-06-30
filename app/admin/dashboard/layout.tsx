@@ -29,9 +29,9 @@ export default async function AdminDashboardLayout({
             Welcome back, Admin 👋
           </p>
 
-          <h1 className="mt-1 text-3xl font-bold tracking-tight leading-tight text-slate-950 lg:text-2xl">
+          {/* <h1 className="mt-1 text-3xl font-bold tracking-tight leading-tight text-slate-950 lg:text-2xl">
             Monitor engagement dan kelola studio
-          </h1>
+          </h1> */}
         </div>
       </div>
         <form action={logoutAdmin}>
