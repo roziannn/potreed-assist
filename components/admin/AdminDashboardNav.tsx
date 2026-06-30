@@ -9,6 +9,7 @@ import {
   ImagePlus,
   Menu,
   PackagePlus,
+  Settings,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,11 @@ const menuItems = [
     href: "/admin/dashboard/booking-manager",
     label: "Booking Manager",
     icon: CalendarCheck2,
+  },
+    {
+    href: "/admin/dashboard/settings",
+    label: "Settings",
+    icon: Settings,
   },
 ];
 

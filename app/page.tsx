@@ -75,7 +75,7 @@ export default function LandingPage() {
       </section>
 
       <ConsultationModal />
-
+{/* 
       <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <div className="grid gap-6 rounded-[2.25rem] border border-white/70 bg-white/70 p-6 shadow-[0_24px_100px_-55px_rgba(15,23,42,0.45)] backdrop-blur-xl lg:grid-cols-[minmax(0,1fr)_340px]">
           <div>
@@ -94,7 +94,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
     </main>
   );
 }

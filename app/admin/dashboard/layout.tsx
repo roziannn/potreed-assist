@@ -22,7 +22,7 @@ export default async function AdminDashboardLayout({
         </div>
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-sky-700">
+          <p className="text-md font-bold text-sky-700">
             Admin Potreed
           </p>
           <p className="text-sm text-slate-500">

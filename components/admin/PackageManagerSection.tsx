@@ -134,12 +134,14 @@ export function PackageManagerSection() {
             <Field label="Kategori">
               <select
                 value={packageCategory}
-                onChange={(event) => setPackageCategory(event.target.value)}
+                onChange={(event) => 
+                  setPackageCategory(event.target.value as "Wedding" | "Wisuda" | "Custom")
+                }
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
               >
-                <option>Wedding</option>
-                <option>Wisuda</option>
-                <option>Custom</option>
+                <option value="Wedding">Wedding</option>
+                <option value="Wisuda">Wisuda</option>
+                <option value="Custom">Custom</option>
               </select>
             </Field>
             <Field label="Harga">

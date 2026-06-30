@@ -1,4 +1,4 @@
-import { BarChart3, CalendarDays, MessageSquareQuote, Sparkles } from "lucide-react";
+import { BarChart3, CalendarDays, MessageSquareQuote, Sparkles, MousePointer2, MessageCircle, Info, Target } from "lucide-react";
 import {
   bookingDateInsights,
   budgetRanges,
@@ -25,23 +25,27 @@ export function SummarySection() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Total klik"
-          value={engagementSummary.totalClicks.toLocaleString("id-ID")}
-        />
-        <MetricCard
-          label="Chat dimulai"
-          value={engagementSummary.floatingChatStarts.toLocaleString("id-ID")}
-        />
-        <MetricCard
-          label="Klik konsultasi"
-          value={engagementSummary.consultationClicks.toLocaleString("id-ID")}
-        />
-        <MetricCard
-          label="Intent booking"
-          value={engagementSummary.bookingIntent.toLocaleString("id-ID")}
-        />
-      </div>
+      <MetricCard
+        icon={<MousePointer2 className="size-5" />}
+        label="Total klik"
+        value={engagementSummary.totalClicks.toLocaleString("id-ID")}
+      />
+      <MetricCard
+        icon={<MessageCircle className="size-5" />}
+        label="Chat dimulai"
+        value={engagementSummary.floatingChatStarts.toLocaleString("id-ID")}
+      />
+      <MetricCard
+        icon={<Info className="size-5" />}
+        label="Klik konsultasi"
+        value={engagementSummary.consultationClicks.toLocaleString("id-ID")}
+      />
+      <MetricCard
+        icon={<Target className="size-5" />}
+        label="Intent booking"
+        value={engagementSummary.bookingIntent.toLocaleString("id-ID")}
+      />
+    </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <InsightPanel
@@ -126,15 +130,25 @@ export function SummarySection() {
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({ 
+  label, 
+  value, 
+  icon 
+}: { 
+  label: string; 
+  value: string; 
+  icon: React.ReactNode; // Tambahkan ini
+}) {
   return (
     <div className="rounded-[1.75rem] border border-slate-100 bg-slate-50 p-5">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
+      <div className="flex items-center gap-3">
+        <div className="text-sky-600">{icon}</div>
+        <p className="text-sm text-slate-500">{label}</p>
+      </div>
+      <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
     </div>
   );
 }
-
 function InsightPanel({
   title,
   subtitle,
