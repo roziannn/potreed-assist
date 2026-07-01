@@ -1,62 +1,83 @@
 "use client";
 
-import { useState } from "react";
-import { Settings, Save, MessageCircle, MapPin, Store, LucideInbox } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Settings, Save, MapPin, Store, LucideInbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase"; 
 
 export function BusinessSettingsSection() {
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    businessName: "Studio Foto Bahagia",
-    whatsapp: "08123456789",
-    instagram: "studiofoto.bahagia",
-    tiktok: "studiofoto.bahagia",
-    address: "Jl. Raya Utama No. 123, Bekasi",
-    serviceArea: "Bekasi, Jakarta Timur, Depok",
+    nama_bisnis: "",
+    nomor_whatsapp: "",
+    instagram_username: "",
+    tiktok_username: "",
+    alamat_lengkap: "",
+    wilayah_layanan: "",
   });
+
+  // Load data saat komponen mount
+  useEffect(() => {
+    async function fetchData() {
+      const { data } = await supabase.from("settings").select("*").eq("id", 1).single();
+      if (data) setFormData(data);
+    }
+    fetchData();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleSave = async () => {
+  setLoading(true);
+  
+  const { error } = await supabase
+    .from("settings")
+    .upsert({ 
+      id: 1, 
+      ...formData 
+    });
+
+  if (error) {
+    console.error("Detail Error:", error); 
+    alert("Gagal simpan: " + error.message);
+  } else {
+    alert("Pengaturan berhasil disimpan!");
+  }
+  setLoading(false);
+};
+
   return (
     <section className="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_100px_-52px_rgba(15,23,42,0.34)] backdrop-blur-xl">
-      <div className="mb-8 flex items-center gap-4">
-        <div className="rounded-3xl bg-sky-100 p-4 text-sky-700">
-          <Settings className="size-7" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Pengaturan Bisnis</h2>
-          <p className="text-slate-500">Kelola informasi publik dan identitas bisnis Anda.</p>
-        </div>
-      </div>
-
+      {/* ... (Header tetap sama) ... */}
+      
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Info Dasar */}
         <div className="rounded-[1.9rem] border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="mb-5 font-bold text-slate-900 flex items-center gap-2">
             <Store className="size-4" /> Informasi Utama
           </h3>
           <div className="space-y-4">
             <Field label="Nama Bisnis">
-              <input name="businessName" value={formData.businessName} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" />
+              <input name="nama_bisnis" value={formData.nama_bisnis} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" />
             </Field>
             <Field label="Nomor WhatsApp">
-              <input name="whatsapp" value={formData.whatsapp} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" placeholder="628..." />
+              <input name="nomor_whatsapp" value={formData.nomor_whatsapp} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" />
             </Field>
           </div>
         </div>
 
-        {/* Media Sosial */}
+        {/* Ulangi penyesuaian nama field (instagram_username, tiktok_username, dst) sesuai kolom DB */}
         <div className="rounded-[1.9rem] border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="mb-5 font-bold text-slate-900 flex items-center gap-2">
+           <h3 className="mb-5 font-bold text-slate-900 flex items-center gap-2">
             <LucideInbox className="size-4" /> Media Sosial
           </h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Username Instagram">
-              <input name="instagram" value={formData.instagram} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" />
+              <input name="instagram_username" value={formData.instagram_username} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" />
             </Field>
             <Field label="Username TikTok">
-              <input name="tiktok" value={formData.tiktok} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" />
+              <input name="tiktok_username" value={formData.tiktok_username} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" />
             </Field>
           </div>
         </div>
@@ -68,18 +89,31 @@ export function BusinessSettingsSection() {
           </h3>
           <div className="grid gap-6 md:grid-cols-2">
             <Field label="Alamat Lengkap">
-              <textarea name="address" value={formData.address} onChange={handleChange} rows={3} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" />
+              <textarea 
+                name="alamat_lengkap" 
+                value={formData.alamat_lengkap} 
+                onChange={handleChange} 
+                rows={3} 
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" 
+              />
             </Field>
             <Field label="Wilayah Layanan">
-              <textarea name="serviceArea" value={formData.serviceArea} onChange={handleChange} rows={3} placeholder="Contoh: Jakarta, Bogor, Depok..." className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" />
+              <textarea 
+                name="wilayah_layanan" 
+                value={formData.wilayah_layanan} 
+                onChange={handleChange} 
+                rows={3} 
+                placeholder="Contoh: Jakarta, Bogor, Depok..." 
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" 
+              />
             </Field>
           </div>
         </div>
       </div>
 
       <div className="mt-8 flex justify-end">
-        <Button className="h-12 rounded-2xl bg-slate-900 px-8 text-white hover:bg-slate-800 gap-2">
-          <Save className="size-4" /> Simpan Pengaturan
+        <Button onClick={handleSave} disabled={loading} className="h-12 rounded-2xl bg-slate-900 px-8 text-white hover:bg-slate-800 gap-2">
+          <Save className="size-4" /> {loading ? "Menyimpan..." : "Simpan Pengaturan"}
         </Button>
       </div>
     </section>

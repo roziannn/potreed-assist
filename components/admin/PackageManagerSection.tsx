@@ -1,50 +1,76 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PencilLine, Plus } from "lucide-react";
-import { servicePackages } from "@/lib/site-data";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase"; 
 
 export function PackageManagerSection() {
-  const [selectedPackageName, setSelectedPackageName] = useState(
-    servicePackages[0]?.name ?? ""
-  );
-  const selectedPackage =
-    servicePackages.find((pkg) => pkg.name === selectedPackageName) ??
-    servicePackages[0];
+  const [packages, setPackages] = useState<any[]>([]);
+  const [selectedPackage, setSelectedPackage] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const [packageName, setPackageName] = useState(selectedPackage?.name ?? "");
-  const [packageCategory, setPackageCategory] = useState(
-    selectedPackage?.category ?? "Wedding"
-  );
-  const [packagePrice, setPackagePrice] = useState("");
-  const [packageHighlight, setPackageHighlight] = useState(
-    selectedPackage?.badge ?? ""
-  );
-  const [packageDescription, setPackageDescription] = useState(
-    selectedPackage?.description ?? ""
-  );
+  // Form state disesuaikan dengan kolom database (image_aab0da.png)
+  const [formData, setFormData] = useState({
+    nama_package: "",
+    kategori: "Wedding",
+    harga: "",
+    highlight_package: "",
+    deskripsi_singkat: "",
+    is_active: true,
+  });
 
-  const handleSelectPackage = (packageNameValue: string) => {
-    const pkg = servicePackages.find((item) => item.name === packageNameValue);
-    if (!pkg) return;
+  useEffect(() => {
+    fetchPackages();
+  }, []);
 
-    setSelectedPackageName(pkg.name);
-    setPackageName(pkg.name);
-    setPackageCategory(pkg.category);
-    setPackagePrice(pkg.price);
-    setPackageHighlight(pkg.badge);
-    setPackageDescription(pkg.description);
+  async function fetchPackages() {
+    const { data } = await supabase.from("packages").select("*").order("is_active", { ascending: false });
+  if (data) setPackages(data);
+  }
+
+  const handleSelectPackage = (pkg: any) => {
+    setSelectedPackage(pkg);
+    setFormData({
+      nama_package: pkg.nama_package,
+      kategori: pkg.kategori,
+      harga: pkg.harga,
+      highlight_package: pkg.highlight_package,
+      deskripsi_singkat: pkg.deskripsi_singkat,
+      is_active: pkg.is_active,
+    });
   };
 
-  const handleAddNew = () => {
-    setSelectedPackageName("");
-    setPackageName("");
-    setPackageCategory("Wedding");
-    setPackagePrice("");
-    setPackageHighlight("");
-    setPackageDescription("");
-  };
+const handleSave = async () => {
+  setLoading(true);
+  console.log("Data yang dikirim:", formData); // Cek apakah datanya ada atau kosong
+
+  const { data, error } = selectedPackage 
+    ? await supabase.from("packages").update(formData).eq("id", selectedPackage.id)
+    : await supabase.from("packages").insert([formData]);
+
+  if (error) {
+    console.error("Error dari Supabase:", error); // <-- LIHAT INI DI CONSOLE
+    alert("Gagal simpan: " + error.message);
+  } else {
+    alert("Berhasil disimpan!");
+    fetchPackages(); // Refresh data
+  }
+  setLoading(false);
+};
+
+const handleAddNew = () => {
+  setSelectedPackage(null); 
+  setFormData({
+    nama_package: "",
+    kategori: "Wedding",
+    harga: "",
+    highlight_package: "",
+    deskripsi_singkat: "",
+    is_active: true,
+  });
+};
+
 
   return (
     <section className="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_100px_-52px_rgba(15,23,42,0.34)] backdrop-blur-xl">
@@ -74,123 +100,141 @@ export function PackageManagerSection() {
           </div>
 
           <div className="space-y-3">
-            {servicePackages.slice(0, 4).map((pkg) => {
-              const isActive = selectedPackageName === pkg.name;
+          {/* Urutkan data: yang aktif duluan (false > true agar aktif di atas), 
+              atau simpelnya kita sort manual */}
+          {[...packages]
+            .sort((a, b) => (a.is_active === b.is_active ? 0 : a.is_active ? -1 : 1))
+            .map((pkg) => {
+              const isActive = selectedPackage?.id === pkg.id;
+              
+              // Styling dinamis: jika tidak aktif, tambahkan class abu-abu
+              const baseStyle = "block w-full rounded-[1.6rem] border p-5 text-left transition";
+              const stateStyle = isActive 
+                ? "border-sky-200 bg-white shadow-[0_20px_60px_-38px_rgba(14,116,144,0.45)]" 
+                : pkg.is_active 
+                  ? "border-white bg-white/90 hover:border-slate-200" 
+                  : "border-transparent bg-slate-100/50 opacity-70 hover:bg-slate-100"; // Style arsip
 
               return (
                 <button
-                  key={pkg.name}
+                  key={pkg.id}
                   type="button"
-                  onClick={() => handleSelectPackage(pkg.name)}
-                  className={`block w-full rounded-[1.6rem] border p-5 text-left transition ${
-                    isActive
-                      ? "border-sky-200 bg-white shadow-[0_20px_60px_-38px_rgba(14,116,144,0.45)]"
-                      : "border-white bg-white/90 hover:border-slate-200 hover:bg-white"
-                  }`}
+                  onClick={() => handleSelectPackage(pkg)}
+                  className={`${baseStyle} ${stateStyle}`}
                 >
                   <div className="mb-2 flex items-start justify-between gap-3">
-                    <span className="text-3 font-semibold text-slate-900 sm:text-[1.05rem]">
-                      {pkg.name}
+                    <span className={`font-semibold ${pkg.is_active ? "text-slate-900" : "text-slate-500"}`}>
+                      {pkg.nama_package} {!pkg.is_active && "(paket nonaktif)"}
                     </span>
-                    <span className="text-sm text-sky-700">{pkg.category}</span>
+                    <span className="text-sm text-sky-700">{pkg.kategori}</span>
                   </div>
-                  <p className="text-[1.05rem] text-slate-500">{pkg.price}</p>
+                  <p className="text-[1.05rem] text-slate-500">
+                    Rp{Number(pkg.harga).toLocaleString('id-ID')}
+                  </p>
                 </button>
               );
             })}
+        </div>
+        </div>
+
+      <div className="rounded-[1.9rem] border border-slate-200 bg-white p-6 shadow-[0_20px_80px_-48px_rgba(15,23,42,0.3)] h-full">
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-lg font-bold text-slate-900">
+              {selectedPackage ? "Edit data package" : "Tambah package baru"}
+            </p>
+            <p className="text-sm text-slate-500">
+              Update detail package yang dipilih.
+            </p>
+          </div>
+          <div className="rounded-full bg-slate-100 p-2 text-slate-600">
+            <PencilLine className="size-4" />
           </div>
         </div>
 
-        <div className="rounded-[1.9rem] border border-slate-200 bg-white p-5 shadow-[0_20px_80px_-48px_rgba(15,23,42,0.3)]">
-          <div className="mb-5 flex items-start justify-between gap-4">
-            <div>
-              <p className="text-lg font-bold text-slate-900">
-                {selectedPackageName ? "Edit data package" : "Tambah package baru"}
-              </p>
-              <p className="text-sm text-slate-500">
-                {selectedPackageName
-                  ? "Update detail package yang sedang dipilih dari card di sebelah kiri."
-                  : "Isi form berikut untuk menambahkan package baru ke daftar aktif."}
-              </p>
-            </div>
-            <div className="rounded-full bg-slate-100 p-2 text-slate-600">
-              {selectedPackageName ? (
-                <PencilLine className="size-4" />
-              ) : (
-                <Plus className="size-4" />
-              )}
-            </div>
+        {/* Grid form dengan gap lebih lebar */}
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field label="Nama package">
+            <input
+              value={formData.nama_package}
+              onChange={(e) => setFormData({...formData, nama_package: e.target.value})}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-sky-500"
+            />
+          </Field>
+          <Field label="Kategori">
+            <select
+              value={formData.kategori}
+              onChange={(e) => setFormData({...formData, kategori: e.target.value})}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-sky-500"
+            >
+              <option>Wedding</option>
+              <option>Wisuda</option>
+            </select>
+          </Field>
+
+          <Field label="Harga">
+            <input
+              value={formData.harga}
+              onChange={(e) => setFormData({...formData, harga: e.target.value})}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-sky-500"
+            />
+          </Field>
+          <Field label="Highlight package">
+            <input
+              value={formData.highlight_package}
+              onChange={(e) => setFormData({...formData, highlight_package: e.target.value})}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-sky-500"
+            />
+          </Field>
+
+          <div className="sm:col-span-2">
+            <Field label="Deskripsi singkat">
+              <textarea
+                value={formData.deskripsi_singkat}
+                onChange={(e) => setFormData({...formData, deskripsi_singkat: e.target.value})}
+                rows={6} // Dibuat lebih tinggi agar terlihat penuh
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-sky-500"
+              />
+            </Field>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Nama package">
-              <input
-                value={packageName}
-                onChange={(event) => setPackageName(event.target.value)}
-                placeholder="Contoh: Wedding Sunset Story"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-              />
-            </Field>
-            <Field label="Kategori">
-              <select
-                value={packageCategory}
-                onChange={(event) => 
-                  setPackageCategory(event.target.value as "Wedding" | "Wisuda" | "Custom")
-                }
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-              >
-                <option value="Wedding">Wedding</option>
-                <option value="Wisuda">Wisuda</option>
-                <option value="Custom">Custom</option>
-              </select>
-            </Field>
-            <Field label="Harga">
-              <input
-                value={packagePrice}
-                onChange={(event) => setPackagePrice(event.target.value)}
-                placeholder="Rp4.500.000"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-              />
-            </Field>
-            <Field label="Highlight package">
-              <input
-                value={packageHighlight}
-                onChange={(event) => setPackageHighlight(event.target.value)}
-                placeholder="Cocok untuk akad + intimate reception"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-              />
-            </Field>
-            <div className="sm:col-span-2">
-              <Field label="Deskripsi singkat">
-                <textarea
-                  value={packageDescription}
-                  onChange={(event) => setPackageDescription(event.target.value)}
-                  rows={4}
-                  placeholder="Deskripsikan keunggulan package ini untuk admin dan calon client."
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-                />
-              </Field>
-            </div>
-            <div className="sm:col-span-2 flex flex-wrap gap-3">
-              <Button className="h-11 rounded-2xl bg-slate-900 px-5 text-white hover:bg-slate-800">
-                {selectedPackageName ? "Simpan perubahan" : "Tambah package"}
-              </Button>
-              {selectedPackageName ? (
-                <Button
+          {selectedPackage && (
+              <div className="sm:col-span-2 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <span className="text-sm font-medium text-slate-700">Status Paket</span>
+                <button
                   type="button"
-                  variant="outline"
-                  className="h-11 rounded-2xl border-slate-200"
-                  onClick={handleAddNew}
+                  onClick={() => setFormData({...formData, is_active: !formData.is_active})}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    formData.is_active ? "bg-emerald-500" : "bg-slate-300"
+                  }`}
                 >
-                  Buat package baru
-                </Button>
-              ) : null}
-            </div>
-          </div>
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    formData.is_active ? "translate-x-6" : "translate-x-1"
+                  }`} />
+                </button>
+              </div>
+            )}
+        </div>
+
+        <div className="mt-8 flex gap-3">
+          <Button 
+            onClick={handleSave} 
+            className="h-12 flex-1 rounded-2xl bg-slate-900 text-white hover:bg-slate-800"
+          >
+            Simpan perubahan
+          </Button>
+          {/* <Button 
+            variant="outline" 
+            onClick={handleAddNew}
+            className="h-12 w-12 rounded-2xl p-0"
+          >
+            <Plus className="size-5" />
+          </Button> */}
         </div>
       </div>
-    </section>
-  );
+            </div>
+          </section>
+        );
 }
 
 function Field({
