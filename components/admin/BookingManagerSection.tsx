@@ -71,6 +71,28 @@ export function BookingManagerSection() {
   }
 };
 
+const handleSaveSettings = async () => {
+  setLoading(true);
+  const { error } = await supabase
+    .from("booking_settings")
+    .upsert([
+      {
+        month: currentDate.getMonth() + 1,
+        year: currentDate.getFullYear(),
+        session_limit: sessionLimit,
+        is_only_weekend: filter === 'weekend',
+        is_only_weekday: filter === 'weekday',
+      }
+    ], { onConflict: 'month, year' });
+
+  setLoading(false);
+  if (error) {
+    alert("Gagal simpan: " + error.message);
+  } else {
+    alert("Pengaturan berhasil disimpan!");
+  }
+};
+
   const handleAddNew = () => {
     setSelectedBooking("");
     setClientName("");
@@ -118,6 +140,29 @@ const fullDates = Object.entries(bookingsByDate).filter(
 
   const [filter, setFilter] = useState<'all' | 'weekend' | 'weekday'>('all'); 
 
+  useEffect(() => {
+  const fetchSettings = async () => {
+    const { data } = await supabase
+      .from("booking_settings")
+      .select("*")
+      .eq("month", currentDate.getMonth() + 1)
+      .eq("year", currentDate.getFullYear())
+      .single();
+
+    if (data) {
+      setSessionLimit(data.session_limit);
+      if (data.is_only_weekend) setFilter('weekend');
+      else if (data.is_only_weekday) setFilter('weekday');
+      else setFilter('all');
+    } else {
+      setSessionLimit(2);
+      setFilter('all');
+    }
+  };
+
+  fetchSettings();
+}, [currentDate]);
+
   return (
     <section className="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_100px_-52px_rgba(34,197,94,0.24)] backdrop-blur-xl">
    <div className="mb-6 flex items-center justify-between gap-4">
@@ -152,7 +197,7 @@ const fullDates = Object.entries(bookingsByDate).filter(
 
         <div className="space-y-4 mb-6 border-b pb-6">
           <div className="flex items-center justify-between px-2">
-            <span className="text-xs font-medium text-slate-500">Limit sesi harian bulan ini:</span>
+            <span className="text-xs font-medium text-slate-500">Limit sesi per-hari bulan ini:</span>
             <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-1">
               <button
                 type="button"
@@ -185,11 +230,11 @@ const fullDates = Object.entries(bookingsByDate).filter(
           </div>
 
           <Button 
-            className="w-full h-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold"
-            onClick={() => alert("Pengaturan berhasil disimpan!")}
-          >
-            Simpan Pengaturan
-          </Button>
+          className="w-full h-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold"
+          onClick={handleSaveSettings} 
+        >
+          Simpan Pengaturan
+        </Button>
         </div>
       </DialogHeader>
 
