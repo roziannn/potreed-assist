@@ -5,6 +5,7 @@ import { PencilLine, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
 import { supabase } from "@/lib/supabase";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "../ui/dialog";
 
 function generateCaption(input: { title: string; category: string; description: string; tone: string; }) {
   const toneMap: Record<string, string> = {
@@ -24,6 +25,161 @@ export function PortfolioManagerSection() {
   const [formData, setFormData] = useState({ judul: "", kategori: "Wedding", deskripsi: "", thumbnail_url: "", is_active: true});
   const [captionTone, setCaptionTone] = useState("hangat");
   const [generatedCaption, setGeneratedCaption] = useState("");
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{ name: string; url: string; path: string }>>([]);
+  const [stagedUploads, setStagedUploads] = useState<Array<{ name: string; url?: string; path: string; uploading: boolean; saved?: boolean }>>([]);
+  const bucketName = "portfolios";
+
+  async function fetchUploadedFiles() {
+    try {
+      if (!selectedPortfolio) {
+        setUploadedFiles([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("portfolio_images")
+        .select("id, image_url, created_at")
+        .eq("portfolio_id", selectedPortfolio.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("DEBUG ERROR SUPABASE (list images):", error);
+        showToast("Gagal memuat file", error.message, "error");
+        return;
+      }
+
+      if (!data) return;
+
+      const files = data.map((f: any) => ({ name: f.image_url.split("/").pop() || f.id, url: f.image_url, path: f.id }));
+      setUploadedFiles(files);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const acceptedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    const maxBytes = 4 * 1024 * 1024;
+
+    if (!acceptedTypes.includes(file.type)) {
+      showToast('Format tidak didukung', 'Hanya jpg, jpeg, dan png yang diperbolehkan.', 'error');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > maxBytes) {
+      showToast('Ukuran file terlalu besar', 'Maksimal 4MB per file.', 'error');
+      e.target.value = '';
+      return;
+    }
+
+    if (!selectedPortfolio) {
+      showToast('Pilih portfolio terlebih dahulu untuk mengupload foto', '', 'error');
+      e.target.value = '';
+      return;
+    }
+
+    const folder = `${selectedPortfolio.id}/`;
+    const filePath = `${folder}${Date.now()}-${file.name}`;
+
+    // add staged entry before upload
+    setStagedUploads((s) => [{ name: file.name, path: filePath, uploading: true }, ...s]);
+
+    try {
+      const { error: uploadErr } = await supabase.storage.from(bucketName).upload(filePath, file, { cacheControl: '3600', upsert: false });
+      if (uploadErr) {
+        console.error('DEBUG ERROR SUPABASE (upload):', uploadErr);
+        const raw = uploadErr.message || JSON.stringify(uploadErr);
+        const friendly = /exceed|maximum|too large/i.test(raw) ? 'Ukuran file terlalu besar.' : raw;
+        showToast('Gagal upload file', friendly, 'error');
+        setStagedUploads((s) => s.map((it) => (it.path === filePath ? { ...it, uploading: false } : it)));
+        return;
+      }
+    } catch (err: any) {
+      console.error('DEBUG ERROR SUPABASE (upload exception):', err);
+      const raw = err?.message || String(err);
+      const friendly = /exceed|maximum|too large/i.test(raw) ? 'Ukuran file terlalu besar.' : raw;
+      showToast('Gagal upload file', friendly, 'error');
+      setStagedUploads((s) => s.map((it) => (it.path === filePath ? { ...it, uploading: false } : it)));
+      return;
+    }
+
+    const { data: publicData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+    const publicUrl = publicData.publicUrl;
+
+    // update staged entry with public url and mark uploaded (not yet saved to DB)
+    setStagedUploads((s) => s.map((it) => (it.path === filePath ? { ...it, url: publicUrl, uploading: false, saved: false } : it)));
+    showToast('Upload berhasil', 'Foto sudah ter-upload dan siap disimpan.');
+  }
+
+  async function saveStagedUploads() {
+    if (!selectedPortfolio) return showToast('Pilih portfolio terlebih dahulu', '', 'error');
+    const toSave = stagedUploads.filter((s) => !s.uploading && !s.saved && s.url).map((s) => ({ portfolio_id: selectedPortfolio.id, image_url: s.url }));
+    if (toSave.length === 0) return showToast('Tidak ada file baru untuk disimpan', '', 'error');
+
+    const { error } = await supabase.from('portfolio_images').insert(toSave);
+    if (error) {
+      console.error('DEBUG ERROR SUPABASE (save staged):', error);
+      return showToast('Gagal menyimpan gambar', error.message, 'error');
+    }
+
+    // refresh DB-sourced list, clear staged uploads
+    await fetchUploadedFiles();
+    setStagedUploads([]);
+    showToast('Simpan berhasil', 'Semua foto baru telah disimpan.');
+  }
+
+  async function handleThumbnailChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const acceptedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    const maxBytes = 4 * 1024 * 1024;
+
+    if (!acceptedTypes.includes(file.type)) {
+      showToast('Format tidak didukung', 'Hanya jpg, jpeg, dan png yang diperbolehkan.', 'error');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > maxBytes) {
+      showToast('Ukuran file terlalu besar', 'Maksimal 4MB per file.', 'error');
+      e.target.value = '';
+      return;
+    }
+
+    const folder = `portfolio-thumbnails/${selectedPortfolio?.id ?? 'draft'}/`;
+    const filePath = `${folder}${Date.now()}-${file.name}`;
+
+    setThumbnailUploading(true);
+    try {
+      const { error: uploadErr } = await supabase.storage.from(bucketName).upload(filePath, file, { cacheControl: '3600', upsert: false });
+      if (uploadErr) {
+        console.error('DEBUG ERROR SUPABASE (thumbnail upload):', uploadErr);
+        const raw = uploadErr.message || JSON.stringify(uploadErr);
+        const friendly = /exceed|maximum|too large/i.test(raw) ? 'Ukuran file terlalu besar.' : raw;
+        showToast('Gagal upload thumbnail', friendly, 'error');
+        return;
+      }
+
+      const { data: publicData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+      const publicUrl = publicData.publicUrl;
+      setFormData({ ...formData, thumbnail_url: publicUrl });
+      showToast('Thumbnail berhasil diupload', 'Thumbnail siap disimpan bersama portfolio.');
+    } catch (err: any) {
+      console.error('DEBUG ERROR SUPABASE (thumbnail upload exception):', err);
+      const raw = err?.message || String(err);
+      const friendly = /exceed|maximum|too large/i.test(raw) ? 'Ukuran file terlalu besar.' : raw;
+      showToast('Gagal upload thumbnail', friendly, 'error');
+    } finally {
+      setThumbnailUploading(false);
+    }
+  }
 
   useEffect(() => { fetchPortfolios(); }, []);
 
@@ -141,6 +297,53 @@ export function PortfolioManagerSection() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Field label="Thumbnail portfolio">
+                <div className="space-y-3">
+                  {formData.thumbnail_url ? (
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <img src={formData.thumbnail_url} alt="thumbnail portfolio" className="h-40 w-full rounded-3xl object-cover border border-slate-200" />
+                        {thumbnailUploading && (
+                          <div className="absolute inset-0 flex items-center justify-center rounded-3xl bg-slate-900/40 text-sm font-semibold text-white">
+                            Mengupload thumbnail...
+                          </div>
+                        )}
+                      </div>
+                      <label className="relative inline-flex w-full cursor-pointer items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                        Ganti thumbnail
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png"
+                          onChange={handleThumbnailChange}
+                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <label className="relative inline-flex w-full cursor-pointer items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                        {thumbnailUploading ? "Mengupload thumbnail..." : "Unggah thumbnail portfolio"}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png"
+                          onChange={handleThumbnailChange}
+                          disabled={thumbnailUploading}
+                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        />
+                      </label>
+                      {thumbnailUploading && (
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-900/40 text-sm font-semibold text-white">
+                          Mengupload thumbnail...
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-xs font-semibold text-red-600">*maks. 4 MB jpeg jpg png</p>
+                </div>
+              </Field>
+            </div>
+
             <Field label="Judul portfolio">
               <input
                 value={formData.judul}
@@ -237,9 +440,99 @@ export function PortfolioManagerSection() {
                 Generate AI caption
               </Button>
               
-              <Button type="button" variant="outline" className="h-11 rounded-2xl border-amber-100">
-                Upload foto
-              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button type="button" variant="outline" className="h-11 rounded-2xl border-amber-100" onClick={() => { setShowUploadModal(true); fetchUploadedFiles(); }}>
+                    Upload foto
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Upload foto portfolio</DialogTitle>
+                  </DialogHeader>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="relative inline-flex w-full cursor-pointer items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                        Pilih file foto
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png"
+                          onChange={handleFileChange}
+                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        />
+                      </label>
+                      <p className="mt-2 text-xs text-red-600">* Maks. 4MB • jpg, jpeg, png</p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 mb-2">Staged uploads</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        {stagedUploads.length === 0 ? (
+                          <div className="text-sm text-slate-500">Belum ada upload baru.</div>
+                        ) : (
+                          stagedUploads.map((s) => (
+                            <div key={s.path} className="rounded-md border p-2">
+                              {s.url ? (
+                                <img src={s.url} alt={s.name} className="w-full h-24 object-cover rounded" />
+                              ) : (
+                                <div className="w-full h-24 flex items-center justify-center bg-slate-100">Uploading...</div>
+                              )}
+                              <div className="mt-2 flex items-center justify-between">
+                                <span className="text-xs truncate">{s.name}</span>
+                                <div className="flex gap-2">
+                                  <span className="text-xs text-slate-500">{s.uploading ? 'Uploading' : 'Ready'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 mb-2">Uploaded files</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        {uploadedFiles.length === 0 ? (
+                          <div className="text-sm text-slate-500">Belum ada file.</div>
+                        ) : (
+                          uploadedFiles.map((f) => (
+                            <div key={f.path} className="rounded-md border p-2">
+                              <img src={f.url} alt={f.name} className="w-full h-24 object-cover rounded" />
+                              <div className="mt-2 flex items-center justify-between">
+                                <span className="text-xs truncate">{f.name}</span>
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, thumbnail_url: f.url })}
+                                    className="text-xs text-emerald-600"
+                                  >
+                                    Pilih
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      onClick={saveStagedUploads}
+                      disabled={stagedUploads.some((s) => s.uploading) || stagedUploads.length === 0}
+                      className="h-10 rounded-2xl bg-amber-500 px-4 text-white"
+                    >
+                      Simpan upload
+                    </Button>
+                    <DialogClose asChild>
+                      <Button variant="outline" className="h-10 rounded-2xl">Tutup</Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               {selectedPortfolio && (
                 <Button
