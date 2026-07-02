@@ -19,6 +19,7 @@ function generateCaption(input: { title: string; category: string; description: 
 export function PortfolioManagerSection() {
   const { showToast } = useToast();
   const [portfolios, setPortfolios] = useState<any[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [selectedPortfolio, setSelectedPortfolio] = useState<any | null>(null);
   const [formData, setFormData] = useState({ judul: "", kategori: "Wedding", deskripsi: "", thumbnail_url: "", is_active: true});
   const [captionTone, setCaptionTone] = useState("hangat");
@@ -27,8 +28,13 @@ export function PortfolioManagerSection() {
   useEffect(() => { fetchPortfolios(); }, []);
 
   async function fetchPortfolios() {
-    const { data } = await supabase.from("portfolios").select("*").order("created_at", { ascending: false });
-    if (data) setPortfolios(data);
+    setLoadingData(true);
+    try {
+      const { data } = await supabase.from("portfolios").select("*").order("created_at", { ascending: false });
+      if (data) setPortfolios(data);
+    } finally {
+      setLoadingData(false);
+    }
   }
 
   const handleSelectPortfolio = (item: any) => {
@@ -78,38 +84,42 @@ export function PortfolioManagerSection() {
           </div>
 
           <div className="space-y-4">
-            {[...portfolios]
-            .sort((a, b) => (a.is_active === b.is_active ? 0 : a.is_active ? -1 : 1))
-            .map((item) => {
-              const isActive = selectedPortfolio?.id === item.id;
-              
-              const cardStyle = item.is_active 
-                ? (isActive 
-                    ? "border-amber-200 bg-white shadow-[0_20px_60px_-38px_rgba(217,119,6,0.35)]" 
-                    : "border-white bg-white/90 hover:border-amber-100")
-                : "border-transparent bg-slate-100/70 opacity-80 hover:bg-slate-100"; 
+            {loadingData ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-28 w-full animate-pulse rounded-[1.6rem] bg-slate-200/70" />
+              ))
+            ) : (
+              [...portfolios]
+                .sort((a, b) => (a.is_active === b.is_active ? 0 : a.is_active ? -1 : 1))
+                .map((item) => {
+                  const isActive = selectedPortfolio?.id === item.id;
 
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleSelectPortfolio(item)}
-                  className={`block w-full rounded-[1.6rem] border p-5 text-left transition-all ${cardStyle}`}
-                >
-                  <div className="mb-2 flex items-start justify-between gap-3">
-                    <span className={`font-semibold ${item.is_active ? "text-slate-900" : "text-slate-500"}`}>
-                      {item.judul} {!item.is_active && "(nonaktif)"}
-                    </span>
-                    <span className={`text-sm ${item.is_active ? "text-amber-700" : "text-slate-400"}`}>
-                      {item.kategori}
-                    </span>
-                  </div>
-                  <p className="line-clamp-2 text-sm text-slate-500">
-                    {item.deskripsi}
-                  </p>
-                </button>
-              );
-            })}
+                  const cardStyle = item.is_active
+                    ? isActive
+                      ? "border-amber-200 bg-white shadow-[0_20px_60px_-38px_rgba(217,119,6,0.35)]"
+                      : "border-white bg-white/90 hover:border-amber-100"
+                    : "border-transparent bg-slate-100/70 opacity-80 hover:bg-slate-100";
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleSelectPortfolio(item)}
+                      className={`block w-full rounded-[1.6rem] border p-5 text-left transition-all ${cardStyle}`}
+                    >
+                      <div className="mb-2 flex items-start justify-between gap-3">
+                        <span className={`font-semibold ${item.is_active ? "text-slate-900" : "text-slate-500"}`}>
+                          {item.judul} {!item.is_active && "(nonaktif)"}
+                        </span>
+                        <span className={`text-sm ${item.is_active ? "text-amber-700" : "text-slate-400"}`}>
+                          {item.kategori}
+                        </span>
+                      </div>
+                      <p className="line-clamp-2 text-sm text-slate-500">{item.deskripsi}</p>
+                    </button>
+                  );
+                })
+            )}
           </div>
         </div>
 

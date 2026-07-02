@@ -17,12 +17,18 @@ export function BusinessSettingsSection() {
     alamat_lengkap: "",
     wilayah_layanan: "",
   });
+  const [loadingData, setLoadingData] = useState(true);
 
   // Load data saat komponen mount
   useEffect(() => {
     async function fetchData() {
-      const { data } = await supabase.from("settings").select("*").eq("id", 1).single();
-      if (data) setFormData(data);
+      setLoadingData(true);
+      try {
+        const { data } = await supabase.from("settings").select("*").eq("id", 1).single();
+        if (data) setFormData(data);
+      } finally {
+        setLoadingData(false);
+      }
     }
     fetchData();
   }, []);
@@ -60,12 +66,21 @@ export function BusinessSettingsSection() {
             <Store className="size-4" /> Informasi Utama
           </h3>
           <div className="space-y-4">
-            <Field label="Nama Bisnis">
-              <input name="nama_bisnis" value={formData.nama_bisnis} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" />
-            </Field>
-            <Field label="Nomor WhatsApp">
-              <input name="nomor_whatsapp" value={formData.nomor_whatsapp} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" />
-            </Field>
+            {loadingData ? (
+              <div className="space-y-3">
+                <div className="h-10 w-3/4 animate-pulse rounded bg-slate-200/70" />
+                <div className="h-10 w-2/4 animate-pulse rounded bg-slate-200/70" />
+              </div>
+            ) : (
+              <>
+                <Field label="Nama Bisnis">
+                  <input name="nama_bisnis" value={formData.nama_bisnis} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" />
+                </Field>
+                <Field label="Nomor WhatsApp">
+                  <input name="nomor_whatsapp" value={formData.nomor_whatsapp} onChange={handleChange} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none" />
+                </Field>
+              </>
+            )}
           </div>
         </div>
 

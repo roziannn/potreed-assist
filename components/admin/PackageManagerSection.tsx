@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 export function PackageManagerSection() {
   const { showToast } = useToast();
   const [packages, setPackages] = useState<any[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [selectedPackage, setSelectedPackage] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -26,8 +27,13 @@ export function PackageManagerSection() {
   }, []);
 
   async function fetchPackages() {
-    const { data } = await supabase.from("packages").select("*").order("is_active", { ascending: false });
-  if (data) setPackages(data);
+    setLoadingData(true);
+    try {
+      const { data } = await supabase.from("packages").select("*").order("is_active", { ascending: false });
+      if (data) setPackages(data);
+    } finally {
+      setLoadingData(false);
+    }
   }
 
   const handleSelectPackage = (pkg: any) => {
@@ -101,40 +107,41 @@ const handleAddNew = () => {
           </div>
 
           <div className="space-y-3">
-          {/* Urutkan data: yang aktif duluan (false > true agar aktif di atas), 
-              atau simpelnya kita sort manual */}
-          {[...packages]
-            .sort((a, b) => (a.is_active === b.is_active ? 0 : a.is_active ? -1 : 1))
-            .map((pkg) => {
-              const isActive = selectedPackage?.id === pkg.id;
-              
-              // Styling dinamis: jika tidak aktif, tambahkan class abu-abu
-              const baseStyle = "block w-full rounded-[1.6rem] border p-5 text-left transition";
-              const stateStyle = isActive 
-                ? "border-sky-200 bg-white shadow-[0_20px_60px_-38px_rgba(14,116,144,0.45)]" 
-                : pkg.is_active 
-                  ? "border-white bg-white/90 hover:border-slate-200" 
-                  : "border-transparent bg-slate-100/50 opacity-70 hover:bg-slate-100"; // Style arsip
+          {loadingData ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-24 w-full animate-pulse rounded-[1.6rem] bg-slate-200/70" />
+            ))
+          ) : (
+            [...packages]
+              .sort((a, b) => (a.is_active === b.is_active ? 0 : a.is_active ? -1 : 1))
+              .map((pkg) => {
+                const isActive = selectedPackage?.id === pkg.id;
 
-              return (
-                <button
-                  key={pkg.id}
-                  type="button"
-                  onClick={() => handleSelectPackage(pkg)}
-                  className={`${baseStyle} ${stateStyle}`}
-                >
-                  <div className="mb-2 flex items-start justify-between gap-3">
-                    <span className={`font-semibold ${pkg.is_active ? "text-slate-900" : "text-slate-500"}`}>
-                      {pkg.nama_package} {!pkg.is_active && "(paket nonaktif)"}
-                    </span>
-                    <span className="text-sm text-sky-700">{pkg.kategori}</span>
-                  </div>
-                  <p className="text-[1.05rem] text-slate-500">
-                    Rp{Number(pkg.harga).toLocaleString('id-ID')}
-                  </p>
-                </button>
-              );
-            })}
+                const baseStyle = "block w-full rounded-[1.6rem] border p-5 text-left transition";
+                const stateStyle = isActive
+                  ? "border-sky-200 bg-white shadow-[0_20px_60px_-38px_rgba(14,116,144,0.45)]"
+                  : pkg.is_active
+                  ? "border-white bg-white/90 hover:border-slate-200"
+                  : "border-transparent bg-slate-100/50 opacity-70 hover:bg-slate-100";
+
+                return (
+                  <button
+                    key={pkg.id}
+                    type="button"
+                    onClick={() => handleSelectPackage(pkg)}
+                    className={`${baseStyle} ${stateStyle}`}
+                  >
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <span className={`font-semibold ${pkg.is_active ? "text-slate-900" : "text-slate-500"}`}>
+                        {pkg.nama_package} {!pkg.is_active && "(paket nonaktif)"}
+                      </span>
+                      <span className="text-sm text-sky-700">{pkg.kategori}</span>
+                    </div>
+                    <p className="text-[1.05rem] text-slate-500">Rp{Number(pkg.harga).toLocaleString('id-ID')}</p>
+                  </button>
+                );
+              })
+          )}
         </div>
         </div>
 
