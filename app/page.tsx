@@ -2,7 +2,7 @@ import { Navbar } from "@/components/Navbar";
 import { FloatingChat } from "@/components/FloatingChat";
 import { ConsultationModal } from "@/components/ConsultationModal";
 import { supabase } from "@/lib/supabase";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Flame, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 type PortfolioSnapshot = {
@@ -54,10 +54,10 @@ export default async function LandingPage() {
             Where Beautiful Moments Begin
           </div>
 
-          <h1 className="max-w-4xl text-5xl font-black leading-none tracking-tight text-slate-950 sm:text-6xl lg:text-7xl">
-            Momen terbaik,
+          <h1 className="max-w-4xl text-4xl font-bold leading-none tracking-tight text-slate-950 sm:text-6xl lg:text-7xl">
+            Semua kebutuhan foto dan video
             <span className="block text-sky-600">
-              pengalaman booking yang lebih mudah.
+              capture momen spesialmu
             </span>
           </h1>
 
@@ -91,28 +91,31 @@ export default async function LandingPage() {
           <div className="rounded-[1.8rem] bg-[linear-gradient(145deg,_rgba(14,165,233,0.16),_rgba(255,255,255,0.95)_55%,_rgba(251,191,36,0.12))] p-5">
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-slate-500">Portfolio snapshot</p>
-                <h2 className="text-2xl font-bold text-slate-900">Visual direction terbaru</h2>
+                {/* <p className="text-sm font-semibold text-slate-500">New</p> */}
+                <div className="flex items-center gap-2">
+                  <Flame className="size-5 text-orange-500 drop-shadow-[0_0_12px_rgba(251,146,60,0.7)]" />
+                  <h2 className="text-2xl font-bold text-slate-900">Portfolio snapshot</h2>
+                </div>
               </div>
               <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-sky-700">
-                3 highlight
+                New shoots
               </span>
             </div>
             <div className="space-y-3">
               {snapshotItems.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="rounded-[1.5rem] border border-white/80 bg-white/85 p-4 shadow-sm"
-                >
-                  <div className="mb-2 flex items-center justify-between">
-                    <h3 className="font-semibold text-slate-900">{item.judul}</h3>
-                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">
+                <Link key={item.id} href={`/portfolio/${item.id}`} className="group block rounded-[1.5rem] border border-white/80 bg-white/85 p-4 shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:border-sky-200 hover:bg-white cursor-pointer">
+                  <div className="mb-2 flex items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-semibold text-slate-900">{item.judul}</h3>
+                      <p className="text-sm font-medium text-sky-700">{item.kategori}</p>
+                    </div>
+                    <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">
                       0{index + 1}
+                      <ArrowRight className="size-4 text-sky-500 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1" />
                     </span>
                   </div>
-                  <p className="mb-2 text-sm font-medium text-sky-700">{item.kategori}</p>
                   <p className="text-sm leading-6 text-slate-600">{item.deskripsi}</p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
