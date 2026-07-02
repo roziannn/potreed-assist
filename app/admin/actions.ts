@@ -31,7 +31,7 @@ export async function loginAdmin(
   }
 
   await createAdminSession();
-  redirect("/admin/dashboard");
+  redirect("/admin/dashboard?toast=login-success");
 }
 
 export async function logoutAdmin() {

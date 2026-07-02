@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { PencilLine, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast-provider";
 import { supabase } from "@/lib/supabase";
 
 function generateCaption(input: { title: string; category: string; description: string; tone: string; }) {
@@ -16,6 +17,7 @@ function generateCaption(input: { title: string; category: string; description: 
 }
 
 export function PortfolioManagerSection() {
+  const { showToast } = useToast();
   const [portfolios, setPortfolios] = useState<any[]>([]);
   const [selectedPortfolio, setSelectedPortfolio] = useState<any | null>(null);
   const [formData, setFormData] = useState({ judul: "", kategori: "Wedding", deskripsi: "", thumbnail_url: "", is_active: true});
@@ -46,8 +48,8 @@ export function PortfolioManagerSection() {
       ? await supabase.from("portfolios").update(payload).eq("id", selectedPortfolio.id)
       : await supabase.from("portfolios").insert([payload]);
     
-    if (error) alert("Gagal: " + error.message);
-    else { alert("Berhasil!"); fetchPortfolios(); handleAddNew(); }
+    if (error) showToast("Gagal menyimpan portfolio", error.message, "error");
+    else { showToast("Portfolio tersimpan", "Portfolio berhasil disimpan dan diperbarui."); fetchPortfolios(); handleAddNew(); }
   };
 
   const handleAddNew = () => {

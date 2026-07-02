@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { Settings, Save, MapPin, Store, LucideInbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast-provider";
 import { supabase } from "@/lib/supabase"; 
 
 export function BusinessSettingsSection() {
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nama_bisnis: "",
@@ -41,9 +43,9 @@ export function BusinessSettingsSection() {
 
   if (error) {
     console.error("Detail Error:", error); 
-    alert("Gagal simpan: " + error.message);
+    showToast("Gagal menyimpan pengaturan", error.message, "error");
   } else {
-    alert("Pengaturan berhasil disimpan!");
+    showToast("Pengaturan tersimpan", "Informasi bisnis berhasil diperbarui.");
   }
   setLoading(false);
 };

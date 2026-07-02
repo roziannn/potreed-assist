@@ -1,14 +1,22 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { Loader2, LockKeyhole, Mail } from "lucide-react";
 import { loginAdmin, type LoginFormState } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast-provider";
 
 const initialState: LoginFormState = {};
 
 export function AdminLoginForm() {
   const [state, action, pending] = useActionState(loginAdmin, initialState);
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (state.error) {
+      showToast("Login gagal", state.error, "error");
+    }
+  }, [showToast, state.error]);
 
   return (
     <form action={action} className="space-y-5">

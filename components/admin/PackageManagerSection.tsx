@@ -3,14 +3,15 @@
 import { useState, useEffect } from "react";
 import { PencilLine, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast-provider";
 import { supabase } from "@/lib/supabase"; 
 
 export function PackageManagerSection() {
+  const { showToast } = useToast();
   const [packages, setPackages] = useState<any[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Form state disesuaikan dengan kolom database (image_aab0da.png)
   const [formData, setFormData] = useState({
     nama_package: "",
     kategori: "Wedding",
@@ -50,11 +51,11 @@ const handleSave = async () => {
     : await supabase.from("packages").insert([formData]);
 
   if (error) {
-    console.error("Error dari Supabase:", error); // <-- LIHAT INI DI CONSOLE
-    alert("Gagal simpan: " + error.message);
+    console.error("Error dari Supabase:", error);
+    showToast("Gagal menyimpan package", error.message, "error");
   } else {
-    alert("Berhasil disimpan!");
-    fetchPackages(); // Refresh data
+    showToast("Package tersimpan", "Data package berhasil diperbarui.");
+    fetchPackages();
   }
   setLoading(false);
 };

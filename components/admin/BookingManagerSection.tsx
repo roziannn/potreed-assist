@@ -5,8 +5,10 @@ import { supabase } from "@/lib/supabase"; // Pastikan path ini benar
 import { Button } from "../ui/button";
 import { CalendarCheck2, CalendarDays, ChevronLeft, ChevronRight, ClipboardList, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
+import { useToast } from "@/components/ui/toast-provider";
 
 export function BookingManagerSection() {
+  const { showToast } = useToast();
   const [bookings, setBookings] = useState<any[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,9 +61,9 @@ export function BookingManagerSection() {
 
     if (error) {
       console.error("DEBUG ERROR SUPABASE:", error);
-      alert("Gagal simpan: " + error.message + " - " + (error.details || ""));
+      showToast("Gagal menyimpan booking", error.message, "error");
     } else {
-      alert("Berhasil disimpan!");
+      showToast("Booking tersimpan", "Perubahan booking berhasil disimpan.");
       fetchBookings();
     }
   } catch (err) {
@@ -87,9 +89,9 @@ const handleSaveSettings = async () => {
 
   setLoading(false);
   if (error) {
-    alert("Gagal simpan: " + error.message);
+    showToast("Gagal menyimpan pengaturan", error.message, "error");
   } else {
-    alert("Pengaturan berhasil disimpan!");
+    showToast("Pengaturan tersimpan", "Pengaturan kalender berhasil diperbarui.");
   }
 };
 
