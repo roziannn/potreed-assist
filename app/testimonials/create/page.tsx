@@ -28,9 +28,9 @@ export default function CreateTestimonialPage() {
     const { error } = await supabase.from("testimonials").insert([
       {
         name: name || "Anonim",
-        event: "Sesi Foto",
-        quote: comment.trim(),
+        testimonial: comment.trim(),
         rating,
+        is_approved: false,
       },
     ]);
 
