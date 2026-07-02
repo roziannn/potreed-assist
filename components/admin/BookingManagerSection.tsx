@@ -22,6 +22,7 @@ export function BookingManagerSection() {
   const [budget, setBudget] = useState("");
   const [catatan_admin, setcatatan_admin] = useState("");
   const [whatsapp, setWhatsapp] = useState(""); 
+  const [isDone, setIsDone] = useState(false);
   useEffect(() => {
     fetchBookings();
   }, []);
@@ -38,24 +39,30 @@ export function BookingManagerSection() {
 
   const handleSelectBooking = (booking: any) => {
     setSelectedBooking(booking);
-    setClientName(booking.nama_client);
-    setEventType(booking.jenis_event);
-    setPackageName(booking.package_name);
-    setEventDate(booking.tanggal_event);
-    setStatus(booking.status);
-    setBudget(booking.budget);
-    setcatatan_admin(booking.catatan_admin);
-    setWhatsapp(booking.whatsapp);
+    setClientName(booking.nama_client ?? "");
+    setEventType(booking.jenis_event ?? "Wedding");
+    setPackageName(booking.package_name ?? "");
+    setEventDate(booking.tanggal_event ?? "");
+    setStatus(booking.status ?? "Pending");
+    setBudget(booking.budget ?? "");
+    setcatatan_admin(booking.catatan_admin ?? "");
+    setWhatsapp(booking.whatsapp ?? "");
+    setIsDone(booking.is_done ?? false);
   };
 
   const handleSave = async () => {
   setLoading(true);
+  // sanitize budget: convert formatted string to number, or null if empty
+  const cleanedBudget = (budget || "").toString().replace(/[^0-9.-]/g, "");
+  const parsedBudget = cleanedBudget === "" ? null : Number(cleanedBudget);
+
   const payload = {
     nama_client: clientName,
     jenis_event: eventType,
     tanggal_event: eventDate,
     status: status,
-    budget: budget,
+    is_done: isDone,
+    budget: parsedBudget,
     catatan_admin: catatan_admin,
     whatsapp: whatsapp,
   };
@@ -111,6 +118,7 @@ const handleSaveSettings = async () => {
     setBudget("");
     setcatatan_admin("");
     setWhatsapp("");
+    setIsDone(false);
   };
   const [showModal, setShowModal] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -343,19 +351,11 @@ const fullDates = Object.entries(bookingsByDate).filter(
         <div className="rounded-[1.9rem] border border-emerald-100 bg-white p-5 shadow-[0_20px_80px_-48px_rgba(34,197,94,0.28)]">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
-              <p className="text-lg font-bold text-slate-900">
-                {selectedBooking ? "Edit booking" : "Tambah booking baru"}
-              </p>
-              <p className="text-sm text-slate-500">
-                Update status, paket yang dipilih, tanggal event, dan catatan follow up client.
-              </p>
+              <p className="text-lg font-bold text-slate-900">{selectedBooking ? "Edit booking" : "Tambah booking baru"}</p>
+              <p className="text-sm text-slate-500">Update status, paket yang dipilih, tanggal event, dan catatan follow up client.</p>
             </div>
             <div className="rounded-full bg-emerald-50 p-2 text-emerald-700">
-              {selectedBooking ? (
-                <CalendarCheck2 className="size-4" />
-              ) : (
-                <ClipboardList className="size-4" />
-              )}
+              {selectedBooking ? <CalendarCheck2 className="size-4" /> : <ClipboardList className="size-4" />}
             </div>
           </div>
 
@@ -441,23 +441,31 @@ const fullDates = Object.entries(bookingsByDate).filter(
                 />
               </Field>
             </div>
-            <div className="sm:col-span-2 flex flex-wrap gap-3">
-              <Button 
-              onClick={handleSave} 
-              className="h-11 rounded-2xl bg-emerald-600 px-5 text-white hover:bg-emerald-700"
-            >
-              {selectedBooking ? "Simpan perubahan" : "Tambah booking"}
-            </Button>
-              {selectedBooking ? (
-                <Button
+
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50/50 px-6 py-4 mb-3">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-900">Selesai</span>
+                  <span className="text-xs text-slate-500">Tandai booking sudah selesai</span>
+                </div>
+                <button
                   type="button"
-                  variant="outline"
-                  className="h-11 rounded-2xl border-slate-200"
-                  onClick={handleAddNew}
-                >
-                  Buat booking baru
+                  onClick={() => setIsDone(!isDone)}
+                  className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${isDone ? "bg-emerald-500" : "bg-slate-300"}`}>
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${isDone ? "translate-x-8" : "translate-x-1"}`} />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={handleSave} className="h-11 rounded-2xl bg-emerald-600 px-5 text-white hover:bg-emerald-700">
+                  {selectedBooking ? "Simpan perubahan" : "Tambah booking"}
                 </Button>
-              ) : null}
+                {selectedBooking ? (
+                  <Button type="button" variant="outline" className="h-11 rounded-2xl border-slate-200" onClick={handleAddNew}>
+                    Buat booking baru
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
