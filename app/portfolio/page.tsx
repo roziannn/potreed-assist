@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Camera, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { FloatingChat } from "@/components/FloatingChat";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
@@ -43,8 +44,8 @@ export default function PortfolioPage() {
             <Sparkles className="size-4" />
             Portfolio Highlights
           </div>
-          <h1 className="mt-5 text-5xl font-black tracking-tight text-slate-950 sm:text-6xl">
-            Karya yang membantu client
+          <h1 className="mt-5 text-5xl font-bold tracking-tight text-slate-950 sm:text-6xl">
+            Karya yang membantu
             <span className="block text-amber-600">membayangkan hasil akhirnya.</span>
           </h1>
           <p className="mt-5 text-base leading-7 text-slate-600">
@@ -68,9 +69,10 @@ export default function PortfolioPage() {
             ))
           ) : (
             items.map((item, index) => (
-              <article
+              <Link
                 key={item.id ?? index}
-                className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/80 shadow-[0_24px_100px_-56px_rgba(15,23,42,0.5)] backdrop-blur-xl"
+                href={`/portfolio/${item.id}`}
+                className="block overflow-hidden rounded-[2rem] border border-white/70 bg-white/80 shadow-[0_24px_100px_-56px_rgba(15,23,42,0.5)] backdrop-blur-xl hover:scale-[1.01] transition-transform"
               >
                 <div
                   className="flex aspect-[4/5] items-end p-6"
@@ -93,10 +95,9 @@ export default function PortfolioPage() {
                       {item.judul || item.title}
                     </h2>
                     <p className="mt-3 text-sm leading-7 text-slate-600">{item.deskripsi || item.description}</p>
-                    
                   </div>
                 </div>
-              </article>
+              </Link>
             ))
           )}
         </div>
