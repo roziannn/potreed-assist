@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowRight,
   ArrowLeft,
@@ -32,7 +32,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { servicePackages } from "@/lib/site-data";
+import { supabase } from "@/lib/supabase";
+
+type PackageItem = {
+  id: string;
+  nama_package: string;
+  kategori: string;
+  harga: number | string;
+  highlight_package?: string;
+  deskripsi_singkat?: string;
+  is_active?: boolean;
+};
 
 const serviceTypes = [
   { id: "photo", label: "Pemotretan", icon: Camera },
@@ -81,15 +91,17 @@ function formatRupiah(value: number) {
   }).format(value);
 }
 
-function parsePriceToNumber(price: string) {
-  // ambil angka dari string seperti "Rp2.500.000" atau "Mulai Rp2,5jt"
-  const digitsOnly = price.replace(/[^0-9]/g, "");
+function parsePriceToNumber(price: string | number) {
+  const normalized = typeof price === "number" ? String(price) : price;
+  const digitsOnly = normalized.replace(/[^0-9]/g, "");
   return digitsOnly ? Number(digitsOnly) : 0;
 }
 
 export default function PackagesPage() {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
+  const [packages, setPackages] = useState<PackageItem[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(true);
 
   const [budget, setBudget] = useState(2_500_000);
   const [selectedType, setSelectedType] = useState("");
@@ -107,6 +119,24 @@ export default function PackagesPage() {
     setSelectedDuration("");
     setSelectedTimeline("");
   };
+
+  useEffect(() => {
+    const fetchPackages = async () => {
+      setLoadingPackages(true);
+      const { data } = await supabase
+        .from("packages")
+        .select("id, nama_package, kategori, harga, highlight_package, deskripsi_singkat, is_active")
+        .eq("is_active", true)
+        .order("harga", { ascending: true });
+
+      if (data) {
+        setPackages(data);
+      }
+      setLoadingPackages(false);
+    };
+
+    fetchPackages();
+  }, []);
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
@@ -139,18 +169,18 @@ export default function PackagesPage() {
 
   // logic rekomendasi paket
   const recommendedPackage = (() => {
-    if (!servicePackages.length) return null;
+    if (!packages.length) return null;
 
     const typeKeyword = selectedTypeLabel?.toLowerCase() ?? "";
-    const matchingCategory = servicePackages.filter((pkg) =>
-      typeKeyword ? pkg.category.toLowerCase().includes(typeKeyword.split(" ")[0]) : false
+    const matchingCategory = packages.filter((pkg) =>
+      typeKeyword ? pkg.kategori.toLowerCase().includes(typeKeyword.split(" ")[0]) : false
     );
 
-    const pool = matchingCategory.length > 0 ? matchingCategory : servicePackages;
+    const pool = matchingCategory.length > 0 ? matchingCategory : packages;
 
-    return pool.reduce((closest, pkg) => {
-      const pkgPrice = parsePriceToNumber(pkg.price);
-      const closestPrice = parsePriceToNumber(closest.price);
+    return pool.reduce<PackageItem>((closest, pkg) => {
+      const pkgPrice = parsePriceToNumber(pkg.harga);
+      const closestPrice = parsePriceToNumber(closest.harga);
       return Math.abs(pkgPrice - budget) < Math.abs(closestPrice - budget) ? pkg : closest;
     }, pool[0]);
   })();
@@ -474,10 +504,10 @@ export default function PackagesPage() {
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
                           <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold uppercase text-sky-700">
-                            {recommendedPackage.category}
+                            {recommendedPackage.kategori}
                           </span>
                           <h3 className="mt-2 text-xl font-bold text-slate-900">
-                            {recommendedPackage.name}
+                            {recommendedPackage.nama_package}
                           </h3>
                         </div>
                         <div className="text-right">
@@ -485,29 +515,35 @@ export default function PackagesPage() {
                             Mulai dari
                           </p>
                           <p className="text-lg font-black text-slate-950">
-                            {recommendedPackage.price}
+                            {typeof recommendedPackage.harga === "number"
+                              ? formatRupiah(recommendedPackage.harga)
+                              : recommendedPackage.harga}
                           </p>
                         </div>
                       </div>
 
-                      <div className="mb-3 inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-                        {recommendedPackage.badge}
-                      </div>
                       <p className="text-sm leading-6 text-slate-600">
-                        {recommendedPackage.description}
+                        {recommendedPackage.highlight_package ?? recommendedPackage.deskripsi_singkat}
                       </p>
 
-                      <div className="mt-4 grid gap-2">
-                        {recommendedPackage.features.slice(0, 3).map((feature) => (
-                          <div
-                            key={feature}
-                            className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-700"
-                          >
-                            <BadgeCheck className="size-3.5 text-sky-600" />
-                            {feature}
-                          </div>
-                        ))}
-                      </div>
+                      {recommendedPackage.deskripsi_singkat && (
+                        <div className="mt-4 grid gap-2">
+                          {recommendedPackage.deskripsi_singkat
+                            .split(",")
+                            .map((item) => item.trim())
+                            .filter(Boolean)
+                            .slice(0, 3)
+                            .map((feature) => (
+                              <div
+                                key={feature}
+                                className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-700"
+                              >
+                                <BadgeCheck className="size-3.5 text-sky-600" />
+                                {feature}
+                              </div>
+                            ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -570,49 +606,70 @@ export default function PackagesPage() {
 
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <div className="grid gap-5 lg:grid-cols-2">
-          {servicePackages.map((pkg) => (
-            <article
-              key={pkg.name}
-              className="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_100px_-56px_rgba(15,23,42,0.5)] backdrop-blur-xl"
-            >
-              <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold uppercase text-sky-700">
-                    {pkg.category}
-                  </span>
-                  <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                    {pkg.name}
-                  </h2>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-semibold uppercase text-slate-400">
-                    Mulai dari
-                  </p>
-                  <p className="mt-1 text-2xl font-black text-slate-950">{pkg.price}</p>
-                </div>
-              </div>
+          {loadingPackages ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-80 animate-pulse rounded-[2rem] border border-white/70 bg-slate-100/75"
+              />
+            ))
+          ) : (
+            packages.map((pkg) => {
+              const features = pkg.deskripsi_singkat
+                ? pkg.deskripsi_singkat.split(",").map((item: string) => item.trim()).filter(Boolean)
+                : [];
 
-              <div className="mb-5 inline-flex rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700">
-                {pkg.badge}
-              </div>
-              <p className="text-sm leading-7 text-slate-600">{pkg.description}</p>
-
-              <div className="mt-6 grid gap-3">
-                {pkg.features.map((feature) => (
-                  <div key={feature} className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                    <BadgeCheck className="size-4 text-sky-600" />
-                    {feature}
+              return (
+                <article
+                  key={pkg.id}
+                  className="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_100px_-56px_rgba(15,23,42,0.5)] backdrop-blur-xl"
+                >
+                  <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold uppercase text-sky-700">
+                        {pkg.kategori}
+                      </span>
+                      <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
+                        {pkg.nama_package}
+                      </h2>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-semibold uppercase text-slate-400">
+                        Mulai dari
+                      </p>
+                      <p className="mt-1 text-2xl font-black text-slate-950">
+                        {typeof pkg.harga === "number"
+                          ? formatRupiah(pkg.harga)
+                          : pkg.harga}
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
 
-              <div className="mt-6">
-                <Button className="h-11 rounded-full bg-slate-900 px-5 text-white hover:bg-slate-800">
-                  Tanya paket ini
-                </Button>
-              </div>
-            </article>
-          ))}
+                  <p className="mb-5 text-sm leading-7 text-slate-600">
+                    {pkg.highlight_package}
+                  </p>
+                  {/* <p className="text-sm leading-7 text-slate-600">{pkg.deskripsi_singkat}</p> */}
+
+                  {features.length > 0 && (
+                    <div className="mt-6 grid gap-3">
+                      {features.map((feature: string) => (
+                        <div key={feature} className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                          <BadgeCheck className="size-4 text-sky-600" />
+                          {feature}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-6">
+                    <Button className="h-11 rounded-full bg-slate-900 px-5 text-white hover:bg-slate-800">
+                      Tanya paket ini
+                    </Button>
+                  </div>
+                </article>
+              );
+            })
+          )}
         </div>
       </section>
     </main>

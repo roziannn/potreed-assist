@@ -6,6 +6,17 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
 import { supabase } from "@/lib/supabase"; 
 
+function formatRupiah(value: string) {
+  const digits = value.replace(/[^0-9]/g, "");
+  if (!digits) return "";
+  return "Rp" + Number(digits).toLocaleString("id-ID");
+}
+
+function parseRupiah(value: string) {
+  const digits = value.replace(/[^0-9]/g, "");
+  return digits ? Number(digits) : null;
+}
+
 export function PackageManagerSection() {
   const { showToast } = useToast();
   const [packages, setPackages] = useState<any[]>([]);
@@ -41,7 +52,7 @@ export function PackageManagerSection() {
     setFormData({
       nama_package: pkg.nama_package,
       kategori: pkg.kategori,
-      harga: pkg.harga,
+      harga: formatRupiah(String(pkg.harga ?? "")),
       highlight_package: pkg.highlight_package,
       deskripsi_singkat: pkg.deskripsi_singkat,
       is_active: pkg.is_active,
@@ -50,11 +61,17 @@ export function PackageManagerSection() {
 
 const handleSave = async () => {
   setLoading(true);
-  console.log("Data yang dikirim:", formData); // Cek apakah datanya ada atau kosong
+  const parsedHarga = parseRupiah(formData.harga);
+  const payload = {
+    ...formData,
+    harga: parsedHarga,
+  };
+
+  console.log("Data yang dikirim:", payload); // Cek apakah datanya ada atau kosong
 
   const { data, error } = selectedPackage 
-    ? await supabase.from("packages").update(formData).eq("id", selectedPackage.id)
-    : await supabase.from("packages").insert([formData]);
+    ? await supabase.from("packages").update(payload).eq("id", selectedPackage.id)
+    : await supabase.from("packages").insert([payload]);
 
   if (error) {
     console.error("Error dari Supabase:", error);
@@ -67,7 +84,7 @@ const handleSave = async () => {
 };
 
 const handleAddNew = () => {
-  setSelectedPackage(null); 
+  setSelectedPackage(null);
   setFormData({
     nama_package: "",
     kategori: "Wedding",
@@ -78,6 +95,10 @@ const handleAddNew = () => {
   });
 };
 
+const deskripsiItems = formData.deskripsi_singkat
+  .split(",")
+  .map((item) => item.trim())
+  .filter(Boolean);
 
   return (
     <section className="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_100px_-52px_rgba(15,23,42,0.34)] backdrop-blur-xl">
@@ -183,7 +204,8 @@ const handleAddNew = () => {
           <Field label="Harga">
             <input
               value={formData.harga}
-              onChange={(e) => setFormData({...formData, harga: e.target.value})}
+              onChange={(e) => setFormData({...formData, harga: formatRupiah(e.target.value)})}
+              placeholder="Rp3.250.000"
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-sky-500"
             />
           </Field>
@@ -203,6 +225,21 @@ const handleAddNew = () => {
                 rows={6} // Dibuat lebih tinggi agar terlihat penuh
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-sky-500"
               />
+              <p className="mt-2 text-sm text-slate-500">
+                Pisahkan poin dengan koma, misal: <span className="font-medium text-slate-700">1 fotografer, 45 menit sesi foto, 15 edit warna premium</span>.
+              </p>
+              {deskripsiItems.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {deskripsiItems.map((item, index) => (
+                    <span
+                      key={`${item}-${index}`}
+                      className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              )}
             </Field>
           </div>
 

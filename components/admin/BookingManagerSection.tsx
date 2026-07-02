@@ -7,6 +7,12 @@ import { CalendarCheck2, CalendarDays, ChevronLeft, ChevronRight, ClipboardList,
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { useToast } from "@/components/ui/toast-provider";
 
+function formatRupiah(value: string) {
+  const digits = value.replace(/[^0-9]/g, "");
+  if (!digits) return "";
+  return "Rp" + Number(digits).toLocaleString("id-ID");
+}
+
 export function BookingManagerSection() {
   const { showToast } = useToast();
   const [bookings, setBookings] = useState<any[]>([]);
@@ -44,7 +50,7 @@ export function BookingManagerSection() {
     setPackageName(booking.package_name ?? "");
     setEventDate(booking.tanggal_event ?? "");
     setStatus(booking.status ?? "Pending");
-    setBudget(booking.budget ?? "");
+    setBudget(formatRupiah(String(booking.budget ?? "")));
     setcatatan_admin(booking.catatan_admin ?? "");
     setWhatsapp(booking.whatsapp ?? "");
     setIsDone(booking.is_done ?? false);
@@ -449,7 +455,7 @@ const fullDates = Object.entries(bookingsByDate).filter(
             <Field label="Budget">
               <input
                 value={budget}
-                onChange={(event) => setBudget(event.target.value)}
+                onChange={(event) => setBudget(formatRupiah(event.target.value))}
                 placeholder="Rp3.250.000"
                 className="w-full rounded-2xl border border-slate-200 bg-emerald-50/30 px-4 py-3 text-sm outline-none transition-colors hover:border-emerald-300 focus:border-emerald-400"
               />
