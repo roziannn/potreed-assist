@@ -1,15 +1,18 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Navbar } from "@/components/Navbar";
 import { FloatingChat } from "@/components/FloatingChat";
 import { bookingItems } from "@/lib/site-data";
+import { supabase } from "@/lib/supabase";
 
 export default function SchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
+  const [bookingFilter, setBookingFilter] = useState<'all' | 'weekend' | 'weekday'>('all');
+  const [loading, setLoading] = useState(true);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -30,6 +33,17 @@ export default function SchedulePage() {
     return (bookingsByDate[dateText] ?? 0) >= maxBookingsPerDate;
   };
 
+  const isDisabledByFilter = (d: number, m: number, y: number) => {
+    const dayOfWeek = new Date(y, m, d).getDay();
+    if (bookingFilter === "weekday") {
+      return dayOfWeek === 0 || dayOfWeek === 6;
+    }
+    if (bookingFilter === "weekend") {
+      return dayOfWeek !== 0 && dayOfWeek !== 6;
+    }
+    return false;
+  };
+
   const fullDates = Object.entries(bookingsByDate).filter(
     ([, count]) => count >= maxBookingsPerDate
   );
@@ -39,6 +53,29 @@ export default function SchedulePage() {
 
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      setLoading(true);
+      const { data } = await supabase
+        .from('booking_settings')
+        .select('*')
+        .eq('month', currentDate.getMonth() + 1)
+        .eq('year', currentDate.getFullYear())
+        .single();
+
+      if (data) {
+        if (data.is_only_weekend) setBookingFilter('weekend');
+        else if (data.is_only_weekday) setBookingFilter('weekday');
+        else setBookingFilter('all');
+      } else {
+        setBookingFilter('all');
+      }
+      setLoading(false);
+    };
+
+    fetchSettings();
+  }, [currentDate]);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(186,230,253,0.75),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#f8fafc_45%,_#fff7ed_100%)]">
@@ -66,31 +103,46 @@ export default function SchedulePage() {
             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <div key={d}>{d}</div>)}
           </div>
 
-          <div className="grid grid-cols-7 gap-1">
-            {blanks.map(b => <div key={`blank-${b}`} />)}
-           {days.map(day => {
-            const full = isFullBooked(day, month, year);
-            return (
-                <div key={day} className="flex flex-col items-center">
-                <button 
-                    disabled={full}
-                    onClick={() => !full && setSelectedDate(day)}
-                    className={`h-9 w-9 flex items-center justify-center rounded-full transition-all font-medium text-sm
-                    ${full ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'hover:bg-blue-100 text-slate-700'}
-                    ${selectedDate === day && !full ? 'bg-blue-600 text-white hover:bg-blue-600' : ''}`}
-                >
-                    {day}
-                </button>
-                
-                {full && (
-                    <span className="text-[9px] font-bold text-red-500 uppercase mt-1 leading-none">
-                    Full
-                    </span>
-                )}
-                </div>
-            );
-            })}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-7 gap-3">
+              {Array.from({ length: 28 }).map((_, idx) => (
+                <div key={idx} className="h-12 rounded-2xl bg-slate-200/70 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-7 gap-1">
+              {blanks.map(b => <div key={`blank-${b}`} />)}
+              {days.map(day => {
+                const full = isFullBooked(day, month, year);
+                const disabledBySettings = isDisabledByFilter(day, month, year);
+                const disabled = full || disabledBySettings;
+                return (
+                  <div key={day} className="flex flex-col items-center">
+                    <button 
+                      disabled={disabled}
+                      onClick={() => !disabled && setSelectedDate(day)}
+                      className={`h-9 w-9 flex items-center justify-center rounded-full transition-all font-medium text-sm
+                        ${disabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'hover:bg-blue-100 text-slate-700'}
+                        ${selectedDate === day && !disabled ? 'bg-blue-600 text-white hover:bg-blue-600' : ''}`}
+                    >
+                      {day}
+                    </button>
+
+                    {full && (
+                      <span className="text-[9px] font-bold text-red-500 uppercase mt-1 leading-none">
+                        Full
+                      </span>
+                    )}
+                    {disabledBySettings && !full && (
+                      <span className="text-[9px] font-bold text-slate-400 uppercase mt-1 leading-none">
+                        Tutup
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
 
         {isFullBooked(1, month, year) && (
