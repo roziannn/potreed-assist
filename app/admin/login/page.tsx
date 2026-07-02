@@ -16,11 +16,11 @@ export default async function AdminLoginPage() {
             <ShieldCheck className="size-4" />
             Admin Access
           </div>
-          <h1 className="mt-5 text-5xl font-black tracking-tight text-slate-950 sm:text-6xl">
+          <h1 className="mt-5 text-5xl font-bold tracking-tight text-slate-950 sm:text-6xl">
             Login admin untuk melihat insight dan kelola konten studio.
           </h1>
           <p className="mt-5 text-base leading-7 text-slate-600">
-            Flow ini sudah dibuat dengan server action dan cookie sederhana supaya akses ke dashboard punya fondasi yang jelas sebelum nanti disambungkan ke database atau auth provider yang sebenarnya.
+           Kelola dan manage studio anda.
           </p>
         </section>
 
