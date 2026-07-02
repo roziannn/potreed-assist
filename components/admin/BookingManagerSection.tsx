@@ -312,27 +312,33 @@ const fullDates = Object.entries(bookingsByDate).filter(
             ) : (
               bookings.map((booking) => {
                 const isActive = selectedBooking?.id === booking.id;
+                const archived = !!booking.is_done;
+
+                const cardClass = archived
+                  ? "border-transparent bg-slate-100/70 opacity-80 hover:bg-slate-100"
+                  : isActive
+                  ? "border-emerald-200 bg-white shadow-[0_20px_60px_-38px_rgba(34,197,94,0.35)]"
+                  : "border-white bg-white/90 hover:border-emerald-100 hover:bg-white";
+
                 return (
                   <button
                     key={booking.id}
                     type="button"
                     onClick={() => handleSelectBooking(booking)}
-                    className={`block w-full rounded-[1.6rem] border p-5 text-left transition ${
-                      isActive
-                        ? "border-emerald-200 bg-white shadow-[0_20px_60px_-38px_rgba(34,197,94,0.35)]"
-                        : "border-white bg-white/90 hover:border-emerald-100 hover:bg-white"
-                    }`}
+                    className={`block w-full rounded-[1.6rem] border p-5 text-left transition ${cardClass}`}
                   >
                     <div className="mb-2 flex items-start justify-between gap-3">
-                      <span className="font-semibold text-slate-900">{booking.nama_client}</span>
-                      <span className="text-sm text-emerald-700">{booking.status}</span>
+                      <span className={`font-semibold ${archived ? "text-slate-500" : "text-slate-900"}`}>
+                        {booking.nama_client}{archived ? " (selesai)" : ""}
+                      </span>
+                      <span className={`text-sm ${archived ? "text-slate-400" : "text-emerald-700"}`}>{booking.status}</span>
                     </div>
 
-                    <p className="text-sm text-slate-600">{booking.package_name}</p>
+                    <p className={`text-sm ${archived ? "text-slate-400" : "text-slate-600"}`}>{booking.package_name}</p>
 
-                    <p className="text-sm font-medium text-slate-500">{booking.jenis_event}</p>
+                    <p className={`text-sm font-medium ${archived ? "text-slate-400" : "text-slate-500"}`}>{booking.jenis_event}</p>
 
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className={`mt-1 text-sm ${archived ? "text-slate-400" : "text-slate-500"}`}>
                       {booking.tanggal_event
                         ? new Date(booking.tanggal_event).toLocaleDateString("id-ID", {
                             day: "2-digit",
