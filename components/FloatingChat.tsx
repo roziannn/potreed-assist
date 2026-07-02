@@ -34,33 +34,44 @@ export function FloatingChat() {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
   }, [messages, isTyping]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim() && !imagePreview) return;
-    
-    const userMsg: Message = { 
-        id: Date.now(), 
-        text: input, 
-        sender: "user",
-        image: imagePreview || undefined 
+
+    const userMsg: Message = {
+      id: Date.now(),
+      text: input,
+      sender: "user",
+      image: imagePreview || undefined,
     };
-    
+
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setImagePreview(null);
     setIsTyping(true);
 
-    setTimeout(() => {
-      let aiResponse = "Terima kasih! Saya sedang memproses data paket tersebut untuk Anda.";
-      if (input.toLowerCase().includes("harga")) {
-        aiResponse = "Tentu! Ini adalah daftar harga paket unggulan kami:";
-      } else if (imagePreview) {
-        aiResponse = "Foto referensi diterima! Konsepnya sangat menarik. Paket 'Wedding Luxury' kami memiliki tone warna yang senada dengan ini. Mau saya buatkan draf booking-nya?";
-      }
+    try {
+      const response = await fetch("/api/assistant", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: input }),
+      });
 
-      const aiMsg: Message = { id: Date.now() + 1, text: aiResponse, sender: "ai" };
+      const data = await response.json();
+      const aiText = data?.answer ?? "Maaf, saya belum bisa menjawab itu saat ini.";
+      const aiMsg: Message = { id: Date.now() + 1, text: aiText, sender: "ai" };
       setMessages((prev) => [...prev, aiMsg]);
+    } catch (error) {
+      const aiMsg: Message = {
+        id: Date.now() + 1,
+        text: "Terjadi kesalahan saat mengambil jawaban. Silakan coba lagi.",
+        sender: "ai",
+      };
+      setMessages((prev) => [...prev, aiMsg]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleImageUpload = (file: File) => {
