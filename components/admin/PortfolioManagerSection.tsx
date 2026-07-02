@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PencilLine, Plus, Sparkles } from "lucide-react";
+import { PencilLine, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
 import { supabase } from "@/lib/supabase";
@@ -27,12 +27,14 @@ export function PortfolioManagerSection() {
   const [generatedCaption, setGeneratedCaption] = useState("");
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<Array<{ name: string; url: string; path: string }>>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{ id: string; name: string; url: string; storagePath: string }>>([]);
+  const [loadingUploadedFiles, setLoadingUploadedFiles] = useState(false);
   const [stagedUploads, setStagedUploads] = useState<Array<{ name: string; url?: string; path: string; uploading: boolean; saved?: boolean }>>([]);
   const bucketName = "portfolios";
 
   async function fetchUploadedFiles() {
     try {
+      setLoadingUploadedFiles(true);
       if (!selectedPortfolio) {
         setUploadedFiles([]);
         return;
@@ -52,10 +54,23 @@ export function PortfolioManagerSection() {
 
       if (!data) return;
 
-      const files = data.map((f: any) => ({ name: f.image_url.split("/").pop() || f.id, url: f.image_url, path: f.id }));
+      const files = data.map((f: any) => {
+        const prefix = `/storage/v1/object/public/${bucketName}/`;
+        const storagePath = f.image_url.includes(prefix)
+          ? f.image_url.split(prefix)[1]
+          : f.image_url;
+        return {
+          id: f.id,
+          name: f.image_url.split("/").pop() || f.id,
+          url: f.image_url,
+          storagePath,
+        };
+      });
       setUploadedFiles(files);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoadingUploadedFiles(false);
     }
   }
 
@@ -132,6 +147,33 @@ export function PortfolioManagerSection() {
     await fetchUploadedFiles();
     setStagedUploads([]);
     showToast('Simpan berhasil', 'Semua foto baru telah disimpan.');
+  }
+
+  async function handleDeleteStagedUpload(stagedItem: { path: string }) {
+    const { error } = await supabase.storage.from(bucketName).remove([stagedItem.path]);
+    if (error) {
+      console.error('DEBUG ERROR SUPABASE (delete staged):', error);
+      return showToast('Gagal menghapus upload sementara', error.message, 'error');
+    }
+    setStagedUploads((current) => current.filter((item) => item.path !== stagedItem.path));
+    showToast('Upload dibatalkan', 'File staged telah dihapus dari storage.');
+  }
+
+  async function handleDeleteUploadedFile(file: { id: string; storagePath: string }) {
+    const { error: storageError } = await supabase.storage.from(bucketName).remove([file.storagePath]);
+    if (storageError) {
+      console.error('DEBUG ERROR SUPABASE (delete storage):', storageError);
+      return showToast('Gagal menghapus file di storage', storageError.message, 'error');
+    }
+
+    const { error: dbError } = await supabase.from('portfolio_images').delete().eq('id', file.id);
+    if (dbError) {
+      console.error('DEBUG ERROR SUPABASE (delete DB):', dbError);
+      return showToast('Gagal menghapus record file', dbError.message, 'error');
+    }
+
+    setUploadedFiles((current) => current.filter((item) => item.id !== file.id));
+    showToast('File dihapus', 'Foto berhasil dihapus dari storage dan database.');
   }
 
   async function handleThumbnailChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -493,12 +535,27 @@ export function PortfolioManagerSection() {
                     <div>
                       <p className="text-sm font-medium text-slate-700 mb-2">Uploaded files</p>
                       <div className="grid grid-cols-3 gap-3">
-                        {uploadedFiles.length === 0 ? (
+                        {loadingUploadedFiles ? (
+                          Array.from({ length: 3 }).map((_, idx) => (
+                            <div key={idx} className="animate-pulse rounded-md border border-slate-200 bg-slate-100 p-2">
+                              <div className="h-24 w-full rounded-lg bg-slate-200" />
+                              <div className="mt-2 h-3 w-3/4 rounded-full bg-slate-200" />
+                            </div>
+                          ))
+                        ) : uploadedFiles.length === 0 ? (
                           <div className="text-sm text-slate-500">Belum ada file.</div>
                         ) : (
                           uploadedFiles.map((f) => (
-                            <div key={f.path} className="rounded-md border p-2">
+                            <div key={f.id} className="relative rounded-md border p-2">
                               <img src={f.url} alt={f.name} className="w-full h-24 object-cover rounded" />
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteUploadedFile(f)}
+                                className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-600 shadow-sm transition hover:bg-rose-100 hover:text-rose-600"
+                                aria-label="Hapus foto"
+                              >
+                                <Trash2 className="size-4" />
+                              </button>
                               <div className="mt-2 flex items-center justify-between">
                                 <span className="text-xs truncate">{f.name}</span>
                                 <div className="flex gap-2">

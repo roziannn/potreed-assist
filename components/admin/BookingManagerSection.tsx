@@ -144,6 +144,18 @@ const handleSaveSettings = async () => {
 
   return (bookingsByDate[dateText] ?? 0) >= sessionLimit;
 };
+
+const isDisabledByFilter = (d: number, m: number, y: number) => {
+  const dayOfWeek = new Date(y, m, d).getDay();
+  if (filter === "weekday") {
+    return dayOfWeek === 0 || dayOfWeek === 6;
+  }
+  if (filter === "weekend") {
+    return dayOfWeek !== 0 && dayOfWeek !== 6;
+  }
+  return false;
+};
+
 const fullDates = Object.entries(bookingsByDate).filter(
   ([, count]) => count >= sessionLimit
 );
@@ -262,14 +274,16 @@ const fullDates = Object.entries(bookingsByDate).filter(
           {blanks.map(b => <div key={`blank-${b}`} />)}
           {days.map(day => {
             const full = isFullBooked(day, month, year);
+            const disabledByFilter = isDisabledByFilter(day, month, year);
+            const disabled = full || disabledByFilter;
             return (
               <div key={day} className="flex flex-col items-center">
                 <button 
-                  disabled={full}
-                  onClick={() => !full && setSelectedDate(day)}
+                  disabled={disabled}
+                  onClick={() => !disabled && setSelectedDate(day)}
                   className={`h-9 w-9 flex items-center justify-center rounded-full transition-all font-medium text-sm
-                  ${full ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'hover:bg-blue-100 text-slate-700'}
-                  ${selectedDate === day && !full ? 'bg-blue-600 text-white hover:bg-blue-600' : ''}`}
+                  ${disabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'hover:bg-blue-100 text-slate-700'}
+                  ${selectedDate === day && !disabled ? 'bg-blue-600 text-white hover:bg-blue-600' : ''}`}
                 >
                   {day}
                 </button>
@@ -277,6 +291,11 @@ const fullDates = Object.entries(bookingsByDate).filter(
                 {full && (
                   <span className="text-[9px] font-bold text-red-500 uppercase mt-1 leading-none">
                     Full
+                  </span>
+                )}
+                {disabledByFilter && !full && (
+                  <span className="text-[9px] font-bold text-slate-400 uppercase mt-1 leading-none">
+                    Tutup
                   </span>
                 )}
               </div>
