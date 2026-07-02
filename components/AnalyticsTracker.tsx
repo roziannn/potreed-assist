@@ -61,7 +61,8 @@ function normalizeTarget(target: HTMLElement | null) {
 
 export function AnalyticsTracker() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const search =
+  typeof window !== "undefined" ? window.location.search : "";
 
   useEffect(() => {
     const session_id = getSessionId();
@@ -74,11 +75,11 @@ export function AnalyticsTracker() {
       event_type: "page_view",
       page,
       metadata: {
-        search: searchParams.toString(),
+        search,
         title: document.title,
-      },
+        }
     });
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   useEffect(() => {
     const session_id = getSessionId();
