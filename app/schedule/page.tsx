@@ -13,10 +13,17 @@ export default function SchedulePage() {
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [bookingFilter, setBookingFilter] = useState<'all' | 'weekend' | 'weekday'>('all');
   const [loading, setLoading] = useState(true);
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [selectedEventType, setSelectedEventType] = useState<'wisuda' | 'wedding' | 'custom' | ''>('');
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const maxBookingsPerDate = 2;
+
+  const handleSelectDate = (day: number) => {
+    setSelectedDate(day);
+    setSelectedEventType('');
+  };
 
   const bookingsByDate = bookingItems.reduce<Record<string, number>>((acc, item) => {
     acc[item.eventDate] = (acc[item.eventDate] ?? 0) + 1;
@@ -32,6 +39,34 @@ export default function SchedulePage() {
 
     return (bookingsByDate[dateText] ?? 0) >= maxBookingsPerDate;
   };
+
+  const normalizeWhatsAppNumber = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    return digits.startsWith("0") ? `62${digits.slice(1)}` : digits;
+  };
+
+  const createWhatsAppUrl = (phone: string, message: string) => {
+    const normalized = normalizeWhatsAppNumber(phone);
+    return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
+  };
+
+  const eventOptions = [
+    {
+      id: "wisuda" as const,
+      label: "Wisuda",
+      description: "Sesi wisuda formal dengan styling dan portofolio profesional.",
+    },
+    {
+      id: "wedding" as const,
+      label: "Wedding",
+      description: "Sesi wedding penuh cerita, mood, dan dokumentasi lengkap.",
+    },
+    {
+      id: "custom" as const,
+      label: "Custom Event",
+      description: "Acara korporat, prewedding, atau konsep kreatif custom.",
+    },
+  ];
 
   const isDisabledByFilter = (d: number, m: number, y: number) => {
     const dayOfWeek = new Date(y, m, d).getDay();
@@ -57,19 +92,26 @@ export default function SchedulePage() {
   useEffect(() => {
     const fetchSettings = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from('booking_settings')
-        .select('*')
-        .eq('month', currentDate.getMonth() + 1)
-        .eq('year', currentDate.getFullYear())
-        .single();
+      const [{ data: bookingData }, { data: settingsData }] = await Promise.all([
+        supabase
+          .from('booking_settings')
+          .select('*')
+          .eq('month', currentDate.getMonth() + 1)
+          .eq('year', currentDate.getFullYear())
+          .single(),
+        supabase.from('settings').select('nomor_whatsapp').eq('id', 1).single(),
+      ]);
 
-      if (data) {
-        if (data.is_only_weekend) setBookingFilter('weekend');
-        else if (data.is_only_weekday) setBookingFilter('weekday');
+      if (bookingData) {
+        if (bookingData.is_only_weekend) setBookingFilter('weekend');
+        else if (bookingData.is_only_weekday) setBookingFilter('weekday');
         else setBookingFilter('all');
       } else {
         setBookingFilter('all');
+      }
+
+      if (settingsData?.nomor_whatsapp) {
+        setWhatsappNumber(settingsData.nomor_whatsapp);
       }
       setLoading(false);
     };
@@ -120,7 +162,7 @@ export default function SchedulePage() {
                   <div key={day} className="flex flex-col items-center">
                     <button 
                       disabled={disabled}
-                      onClick={() => !disabled && setSelectedDate(day)}
+                      onClick={() => !disabled && handleSelectDate(day)}
                       className={`h-9 w-9 flex items-center justify-center rounded-full transition-all font-medium text-sm
                         ${disabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'hover:bg-blue-100 text-slate-700'}
                         ${selectedDate === day && !disabled ? 'bg-blue-600 text-white hover:bg-blue-600' : ''}`}
@@ -162,15 +204,46 @@ export default function SchedulePage() {
 
         {selectedDate && !isFullBooked(selectedDate, month, year) && (
         <div className="animate-in fade-in slide-in-from-bottom-4 mt-6">
-            <div className="rounded-[2rem] border border-sky-100 bg-sky-50/85 p-6 text-center">
-            <h3 className="font-bold text-slate-900 mb-2">
-                Sesi Wisuda Potret
-            </h3>
-            <p className="text-sm text-slate-600 mb-6">
+            <div className="rounded-[2rem] border border-sky-100 bg-sky-50/85 p-6">
+            <div className="text-center">
+              <h3 className="font-bold text-slate-900 mb-2">
+                Pilih jenis acara
+              </h3>
+              <p className="text-sm text-slate-600 mb-6">
                 Tanggal terpilih: <span className="font-bold text-slate-900">{selectedDate} {currentDate.toLocaleString('id-ID', { month: 'long' })}</span>
-            </p>
-            
-            <Button className="h-12 w-full rounded-full bg-sky-600 font-bold shadow-lg shadow-sky-200 hover:bg-sky-700">
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 mb-6">
+              {eventOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setSelectedEventType(option.id)}
+                  className={`rounded-3xl border p-4 text-left transition-all hover:border-sky-300 hover:bg-white/80 ${
+                    selectedEventType === option.id ? 'border-sky-600 bg-sky-100 shadow-sm' : 'border-slate-200 bg-white/80'
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-slate-900">{option.label}</p>
+                  <p className="mt-2 text-xs leading-5 text-slate-600">{option.description}</p>
+                </button>
+              ))}
+            </div>
+
+            <Button
+              type="button"
+              className="h-12 w-full rounded-full bg-sky-600 font-bold shadow-lg shadow-sky-200 hover:bg-sky-700"
+              disabled={!selectedDate || !whatsappNumber || !selectedEventType}
+              onClick={() => {
+                if (!selectedDate || !whatsappNumber || !selectedEventType) return;
+                const eventLabel = eventOptions.find((option) => option.id === selectedEventType)?.label.toLowerCase() ?? 'event';
+                const message = `Halo, saya ingin booking sesi foto ${eventLabel} untuk tanggal ${selectedDate} ${currentDate.toLocaleString('id-ID', {
+                  month: 'long',
+                  year: 'numeric',
+                })}. Apakah masih tersedia?`;
+                window.open(createWhatsAppUrl(whatsappNumber, message), '_blank');
+              }}
+            >
                 Booking Sekarang
             </Button>
             </div>

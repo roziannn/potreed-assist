@@ -212,12 +212,14 @@ export function FloatingChat() {
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.97 }}
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-center gap-2 rounded-full bg-sky-600 px-5 py-3 text-white shadow-lg shadow-sky-200/80 transition-all hover:bg-sky-700 sm:px-6 sm:py-4 ${
-          isOpen ? "w-14 px-0" : "w-full sm:w-auto"
+        className={`flex items-center justify-center gap-2 rounded-full bg-sky-600 text-white shadow-lg shadow-sky-200/80 transition-all hover:bg-sky-700 ${
+          isOpen ? "w-14 h-14 px-0 py-0" : "w-14 h-14 px-0 py-0 sm:w-auto sm:px-6 sm:py-4"
         }`}
       >
         <BotMessageSquare className="size-5 sm:size-6" />
-        {!isOpen ? <span className="font-bold text-sm">Tanya PotreedAssist</span> : null}
+        {!isOpen ? (
+          <span className="hidden font-bold text-sm sm:inline-flex">Tanya PotreedAssist</span>
+        ) : null}
       </motion.button>
     </div>
   );

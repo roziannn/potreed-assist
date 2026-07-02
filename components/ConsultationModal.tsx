@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Camera, ChevronRight, MessageCircleMore, Star } from "lucide-react";
 import {
@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
 
 const consultationPackages = [
   "Paket Wisuda",
@@ -42,8 +43,37 @@ const cards = [
   },
 ];
 
+const normalizeWhatsAppNumber = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+  return digits.startsWith("0") ? `62${digits.slice(1)}` : digits;
+};
+
+const createWhatsAppUrl = (phone: string, message: string) => {
+  const normalized = normalizeWhatsAppNumber(phone);
+  return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
+};
+
 export function ConsultationModal() {
   const [isConsultModalOpen, setIsConsultModalOpen] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from("settings")
+        .select("nomor_whatsapp")
+        .eq("id", 1)
+        .single();
+
+      if (data?.nomor_whatsapp) {
+        setWhatsappNumber(data.nomor_whatsapp);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  const fallbackWhatsapp = "6281231931";
 
   return (
     <>
@@ -102,11 +132,12 @@ export function ConsultationModal() {
                 variant="outline"
                 className="h-14 justify-between rounded-2xl border-sky-100 bg-sky-50/40 px-4 text-left hover:bg-sky-50"
                 onClick={() => {
-                  const message = encodeURIComponent(
-                    `Halo, saya mau tanya-tanya ${pkg}.`
-                  );
+                  const message = `Halo, saya mau tanya-tanya ${pkg}.`;
                   window.open(
-                    `https://wa.me/6281231931?text=${message}`,
+                    createWhatsAppUrl(
+                      whatsappNumber || fallbackWhatsapp,
+                      message
+                    ),
                     "_blank"
                   );
                   setIsConsultModalOpen(false);

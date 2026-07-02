@@ -1,11 +1,48 @@
 import { Navbar } from "@/components/Navbar";
 import { FloatingChat } from "@/components/FloatingChat";
 import { ConsultationModal } from "@/components/ConsultationModal";
-import { portfolioHighlights } from "@/lib/site-data";
+import { supabase } from "@/lib/supabase";
 import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 
-export default function LandingPage() {
+type PortfolioSnapshot = {
+  id: string;
+  kategori: string;
+  judul: string;
+  deskripsi: string;
+};
+
+type SettingsData = {
+  nomor_whatsapp?: string | null;
+};
+
+const normalizeWhatsAppNumber = (value?: string) => {
+  const digits = (value ?? "").replace(/\D/g, "");
+  return digits.startsWith("0") ? `62${digits.slice(1)}` : digits;
+};
+
+export default async function LandingPage() {
+  const { data: settings } = await supabase
+    .from("settings")
+    .select("nomor_whatsapp")
+    .eq("id", 1)
+    .single();
+
+  const whatsappNumber = normalizeWhatsAppNumber(settings?.nomor_whatsapp);
+  const whatsappHref = whatsappNumber
+    ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+        "Halo, saya mau konsultasi sesi foto POTREED."
+      )}`
+    : "/contact";
+
+  const { data: portfolios } = await supabase
+    .from("portfolios")
+    .select("id, kategori, judul, deskripsi")
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  const snapshotItems = (portfolios ?? []) as PortfolioSnapshot[];
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(186,230,253,0.8),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(253,230,138,0.45),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#f8fafc_45%,_#eff6ff_100%)] pb-24 font-sans">
       <Navbar />
@@ -14,31 +51,39 @@ export default function LandingPage() {
         <div>
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-sky-100 bg-white/75 px-4 py-2 text-sm font-semibold text-sky-700 shadow-sm backdrop-blur">
             <Sparkles className="size-4" />
-            AI-Powered Workflow for Photo Studio
+            Where Beautiful Moments Begin
           </div>
+
           <h1 className="max-w-4xl text-5xl font-black leading-none tracking-tight text-slate-950 sm:text-6xl lg:text-7xl">
-            Wedding & Wisuda
-            <span className="block text-sky-600">lebih tertata,</span>
-            lebih cepat closing.
+            Momen terbaik,
+            <span className="block text-sky-600">
+              pengalaman booking yang lebih mudah.
+            </span>
           </h1>
+
           <p className="mt-6 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-            potreed membantu calon client melihat paket, mengecek jadwal,
-            bertanya via AI chat, lalu mengalir ke admin dashboard yang merangkum pola interaksi paling penting.
+            Potreed menghadirkan layanan foto dan video untuk wedding, wisuda,
+            prewedding, hingga berbagai momen spesial lainnya. Jelajahi paket,
+            cek ketersediaan jadwal.
           </p>
+
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/packages"
               className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-slate-900 px-6 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
-              Lihat Package
+              Lihat Paket
               <ArrowRight className="size-4" />
             </Link>
-            <Link
-              href="/admin/dashboard"
+
+            <a
+              href={whatsappHref}
+              target={whatsappNumber ? "_blank" : undefined}
+              rel={whatsappNumber ? "noreferrer" : undefined}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-sky-100 bg-white/80 px-6 text-sm font-semibold text-sky-700 transition hover:bg-sky-50"
             >
-              Preview Admin Dashboard
-            </Link>
+              Konsultasi Gratis
+            </a>
           </div>
         </div>
 
@@ -54,19 +99,19 @@ export default function LandingPage() {
               </span>
             </div>
             <div className="space-y-3">
-              {portfolioHighlights.map((item, index) => (
+              {snapshotItems.map((item, index) => (
                 <div
-                  key={item.title}
+                  key={item.id}
                   className="rounded-[1.5rem] border border-white/80 bg-white/85 p-4 shadow-sm"
                 >
                   <div className="mb-2 flex items-center justify-between">
-                    <h3 className="font-semibold text-slate-900">{item.title}</h3>
+                    <h3 className="font-semibold text-slate-900">{item.judul}</h3>
                     <span className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">
                       0{index + 1}
                     </span>
                   </div>
-                  <p className="mb-2 text-sm font-medium text-sky-700">{item.tag}</p>
-                  <p className="text-sm leading-6 text-slate-600">{item.description}</p>
+                  <p className="mb-2 text-sm font-medium text-sky-700">{item.kategori}</p>
+                  <p className="text-sm leading-6 text-slate-600">{item.deskripsi}</p>
                 </div>
               ))}
             </div>

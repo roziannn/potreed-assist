@@ -78,10 +78,21 @@ const timelineOptions = [
 
 const MIN_BUDGET = 500_000;
 const MAX_BUDGET = 10_000_000;
+const FALLBACK_WHATSAPP_NUMBER = "6281231931";
 // step 1-5 pertanyaan, 6 ringkasan, 7 loading, 8 hasil
 const QUESTION_STEPS = 6;
 const LOADING_STEP = 7;
 const RESULT_STEP = 8;
+
+function normalizeWhatsAppNumber(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits.startsWith("0") ? `62${digits.slice(1)}` : digits;
+}
+
+function createWhatsAppUrl(phone: string, message: string) {
+  const normalized = normalizeWhatsAppNumber(phone);
+  return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
+}
 
 function formatRupiah(value: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -109,6 +120,7 @@ export default function PackagesPage() {
   const [selectedLocation, setSelectedLocation] = useState("");
   const [selectedDuration, setSelectedDuration] = useState("");
   const [selectedTimeline, setSelectedTimeline] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
 
   const resetWizard = () => {
     setStep(1);
@@ -136,6 +148,20 @@ export default function PackagesPage() {
     };
 
     fetchPackages();
+
+    const fetchWhatsAppNumber = async () => {
+      const { data } = await supabase
+        .from("settings")
+        .select("nomor_whatsapp")
+        .eq("id", 1)
+        .single();
+
+      if (data?.nomor_whatsapp) {
+        setWhatsappNumber(normalizeWhatsAppNumber(data.nomor_whatsapp));
+      }
+    };
+
+    fetchWhatsAppNumber();
   }, []);
 
   const handleOpenChange = (next: boolean) => {
@@ -645,7 +671,7 @@ export default function PackagesPage() {
                     </div>
                   </div>
 
-                  <p className="mb-5 text-sm leading-7 text-slate-600">
+                  <p className="mb-5 text-md leading-7 text-slate-600">
                     {pkg.highlight_package}
                   </p>
                   {/* <p className="text-sm leading-7 text-slate-600">{pkg.deskripsi_singkat}</p> */}
@@ -662,8 +688,17 @@ export default function PackagesPage() {
                   )}
 
                   <div className="mt-6">
-                    <Button className="h-11 rounded-full bg-slate-900 px-5 text-white hover:bg-slate-800">
-                      Tanya paket ini
+                    <Button asChild className="h-11 rounded-full bg-slate-900 px-5 text-white hover:bg-slate-800">
+                      <a
+                        href={createWhatsAppUrl(
+                          whatsappNumber || FALLBACK_WHATSAPP_NUMBER,
+                          `Halo, saya mau tanya paket ${pkg.nama_package}.`
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Tanya paket ini
+                      </a>
                     </Button>
                   </div>
                 </article>
