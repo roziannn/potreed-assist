@@ -10,8 +10,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "potreed | AI Assistant for Photographers",
-  description: "Asisten AI cerdas untuk fotografer wedding dan wisuda.",
+  title: "Potreed | Jasa foto dan videographer",
+  description: "Dilengkapi dengan Asisten AI cerdas untuk bantu kebutuhanmu.",
+   other: {
+    "dicoding:email": "usherkentt@gmail.com",
+  },
 };
 
 export default function RootLayout({

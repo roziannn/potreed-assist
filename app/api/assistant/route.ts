@@ -140,7 +140,7 @@ function buildDpAnswer(text: string) {
 
   if (isAskingPelunasan) {
     return withClosing(
-      `Sisa pembayaran (pelunasan) biasanya dilakukan menjelang hari-H, umumnya H-3 sampai hari acara — nanti admin konfirmasi tanggal pastinya saat booking. Kalau kamu sudah punya tanggal, bisa langsung kasih tahu ya biar saya bantu proses.`
+      `Sisa pembayaran (pelunasan) biasanya dilakukan menjelang hari-H, umumnya H-3 sampai hari acara  nanti admin konfirmasi tanggal pastinya saat booking. Kalau kamu sudah punya tanggal, bisa langsung kasih tahu ya biar saya bantu proses.`
     );
   }
 
@@ -157,7 +157,7 @@ function buildDpAnswer(text: string) {
       );
     }
     return withClosing(
-      `Untuk booking, minimal DP-nya 50% ya supaya tanggal bisa benar-benar diamankan. Kalau baru ${offeredPercent}%, biasanya belum cukup untuk kami hold penuh — kamu bisa lanjut di angka 50% dulu.`
+      `Untuk booking, minimal DP-nya 50% ya supaya tanggal bisa benar-benar diamankan. Kalau baru ${offeredPercent}%, biasanya belum cukup untuk kami hold penuh  kamu bisa lanjut di angka 50% dulu.`
     );
   }
 
@@ -297,7 +297,7 @@ function buildPackageInclusionAnswer(packages: PackageRecord[]) {
       "\n"
     )}\n\nSebutkan nama paketnya kalau mau saya cek lebih detail apakah sudah termasuk cetak, album, atau hanya file digital.`;
   }
-  return "Tergantung paket yang dipilih ya. Detail cetak/album/file digital belum tertulis jelas di data paket saat ini — sebutkan nama paketnya atau hubungi admin untuk dicek detail deliverables-nya.";
+  return "Tergantung paket yang dipilih ya. Detail cetak/album/file digital belum tertulis jelas di data paket saat ini  sebutkan nama paketnya atau hubungi admin untuk dicek detail deliverables-nya.";
 }
 
 const buildPackageAnswer = (packages: PackageRecord[]) => {
@@ -389,7 +389,7 @@ const FAQ_TOPICS: FaqTopic[] = [
     ],
     answer: () =>
       withClosing(
-        "Harga yang tercantum sudah final untuk cakupan yang disebutkan di masing-masing paket, jadi tidak ada biaya tersembunyi. Untuk negosiasi/diskon, itu tergantung kebijakan admin saat itu, terutama untuk paket bundling atau pemesanan lengkap — boleh langsung ditanyakan ke admin."
+        "Harga yang tercantum sudah final untuk cakupan yang disebutkan di masing-masing paket, jadi tidak ada biaya tersembunyi. Untuk negosiasi/diskon, itu tergantung kebijakan admin saat itu, terutama untuk paket bundling atau pemesanan lengkap  boleh langsung ditanyakan ke admin."
       ),
   },
   {
@@ -431,7 +431,7 @@ const FAQ_TOPICS: FaqTopic[] = [
     ],
     answer: () =>
       withClosing(
-        `Untuk durasi sesi pemotretan/pengambilan video di hari acara: ${BIZ.durasiSesi}. Kalau maksudnya lama proses edit hasil, itu beda lagi ya — tanya "berapa lama proses edit" biar saya jelaskan.`
+        `Untuk durasi sesi pemotretan/pengambilan video di hari acara: ${BIZ.durasiSesi}. Kalau maksudnya lama proses edit hasil, itu beda lagi ya  tanya "berapa lama proses edit" biar saya jelaskan.`
       ),
   },
   {
@@ -544,19 +544,21 @@ const FAQ_TOPICS: FaqTopic[] = [
     id: "album_print",
     examples: [
       "apakah menyediakan cetak album fisik",
+      "apakah bisa cetak foto",
+      "fotonya bisa dicetak gak",
       "berapa lama pembuatan album",
       "bagaimana kualitas cetak album",
       "apakah ada photobook",
     ],
     answer: () =>
       withClosing(
-        "Cetak album/photobook fisik tersedia sebagai bagian dari beberapa paket atau bisa ditambahkan sebagai add-on, dengan kualitas cetak premium. Estimasi pembuatan biasanya menyusul setelah hasil final foto disetujui — detail lengkapnya bisa dicek per paket."
+        "Cetak album/photobook fisik tersedia sebagai bagian dari beberapa paket atau bisa ditambahkan sebagai add-on, dengan kualitas cetak premium. Estimasi pembuatan biasanya menyusul setelah hasil final foto disetujui, detail lengkapnya bisa dicek per paket."
       ),
   },
   {
     id: "same_day_edit",
     examples: ["apakah ada paket same day edit", "apakah ada sde", "bisa same day edit tidak"],
-    answer: () => withClosing("Same-day edit (SDE) tersedia untuk beberapa paket tertentu, biasanya untuk kebutuhan acara wedding — tanyakan ke admin paket mana saja yang sudah termasuk SDE."),
+    answer: () => withClosing("Same-day edit (SDE) tersedia untuk beberapa paket tertentu, biasanya untuk kebutuhan acara wedding  tanyakan ke admin paket mana saja yang sudah termasuk SDE."),
   },
   {
     id: "music_choice",
@@ -567,7 +569,7 @@ const FAQ_TOPICS: FaqTopic[] = [
     id: "studio_indoor",
     examples: ["apakah ada biaya sewa studio", "apakah bisa foto di studio", "apakah melayani konsep indoor"],
     answer: () =>
-      withClosing("Kami melayani sesi indoor di studio maupun outdoor. Untuk sewa studio, biasanya ada biaya tambahan tergantung studio yang dipakai — bisa didiskusikan sesuai konsep yang kamu mau."),
+      withClosing("Kami melayani sesi indoor di studio maupun outdoor. Untuk sewa studio, biasanya ada biaya tambahan tergantung studio yang dipakai  bisa didiskusikan sesuai konsep yang kamu mau."),
   },
   {
     id: "product_photo_business",
@@ -580,7 +582,7 @@ const FAQ_TOPICS: FaqTopic[] = [
     ],
     answer: () =>
       withClosing(
-        "Untuk kebutuhan bisnis, kami juga melayani foto produk termasuk gaya e-commerce (background putih polos), dan produk yang dikirim akan dikembalikan setelah sesi selesai. Kapasitas per hari menyesuaikan jumlah dan kompleksitas produk — sampaikan detailnya ke admin untuk estimasi waktu dan biaya."
+        "Untuk kebutuhan bisnis, kami juga melayani foto produk termasuk gaya e-commerce (background putih polos), dan produk yang dikirim akan dikembalikan setelah sesi selesai. Kapasitas per hari menyesuaikan jumlah dan kompleksitas produk  sampaikan detailnya ke admin untuk estimasi waktu dan biaya."
       ),
   },
   {
@@ -593,7 +595,7 @@ const FAQ_TOPICS: FaqTopic[] = [
     ],
     answer: () =>
       withClosing(
-        "Kami melayani konten video pendek untuk Reels/TikTok, termasuk opsi subtitle/teks di video. Untuk kebutuhan live streaming juga bisa didiskusikan — tergantung skala dan lokasi acara."
+        "Kami melayani konten video pendek untuk Reels/TikTok, termasuk opsi subtitle/teks di video. Untuk kebutuhan live streaming juga bisa didiskusikan  tergantung skala dan lokasi acara."
       ),
   },
   {
@@ -623,12 +625,12 @@ const FAQ_TOPICS: FaqTopic[] = [
   {
     id: "foreign_language",
     examples: ["apakah tim bisa berbahasa inggris", "apakah bisa untuk tamu internasional"],
-    answer: () => withClosing("Untuk acara dengan tamu internasional, tim kami bisa berkomunikasi dalam Bahasa Inggris dasar — kalau butuh yang lebih spesifik, sampaikan dari awal ya."),
+    answer: () => withClosing("Untuk acara dengan tamu internasional, tim kami bisa berkomunikasi dalam Bahasa Inggris dasar  kalau butuh yang lebih spesifik, sampaikan dari awal ya."),
   },
   {
     id: "multi_location",
     examples: ["apakah bisa foto di lebih dari satu lokasi", "apakah bisa dua tempat berbeda", "multiple location apakah bisa"],
-    answer: () => withClosing("Bisa, sesi di lebih dari satu lokasi bisa diatur, biasanya menyesuaikan durasi paket dan jarak antar lokasi — semakin jauh, semakin perlu alokasi waktu ekstra."),
+    answer: () => withClosing("Bisa, sesi di lebih dari satu lokasi bisa diatur, biasanya menyesuaikan durasi paket dan jarak antar lokasi  semakin jauh, semakin perlu alokasi waktu ekstra."),
   },
   {
     id: "family_bts_ring",
@@ -853,7 +855,7 @@ export async function POST(request: Request) {
       }
 
       return await sendJson({
-        answer: `Mantap! Tanggal ${dateObj.toLocaleDateString("id-ID")} masih tersedia untuk booking! Untuk acara apa ya? (mis. "wisuda", "wedding", atau lainnya) — jawab singkat supaya saya bisa rekomendasikan paket yang cocok.`,
+        answer: `Mantap! Tanggal ${dateObj.toLocaleDateString("id-ID")} masih tersedia untuk booking! Untuk acara apa ya? (mis. "wisuda", "wedding", atau lainnya)  jawab singkat supaya saya bisa rekomendasikan paket yang cocok.`,
       });
     }
 
