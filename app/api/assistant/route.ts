@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
 const normalize = (text: string) => text.trim().toLowerCase();
 
 const buildPackageAnswer = (packages: { nama_package: string; harga: number | string; kategori?: string; highlight_package?: string }[]) => {
   if (!packages.length) {
-    return "Maaf, saya belum menemukan paket yang sesuai saat ini. Silakan tanyakan lagi dengan detail kebutuhan Anda.";
+    return "Ups, saya belum menemukan paket yang cocok saat ini. Mau coba kata kunci lain?";
   }
 
   const lines = packages.slice(0, 3).map((pkg) => {
@@ -13,20 +14,54 @@ const buildPackageAnswer = (packages: { nama_package: string; harga: number | st
     return `• ${pkg.nama_package} (${pkg.kategori ?? "Package"}) - ${harga}`;
   });
 
-  return `Beberapa paket yang tersedia:
-${lines.join("\n")}
-
-Silakan pilih paket yang paling cocok atau tanyakan detail lain seperti "apa saja fitur paket wedding".`;
+  // Ensure each bullet is on its own line and the closing instruction is separated by a blank line.
+  return `Beberapa paket yang tersedia:\n\n${lines.join("\n")}\n\nSilakan pilih paket yang paling cocok atau tanyakan detail lain seperti "apa saja fitur paket wedding".`;
 };
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  const message = normalize(body?.message ?? "");
+  const originalMessage = body?.message ?? "";
+  const message = normalize(originalMessage ?? "");
   if (!message) {
-    return NextResponse.json({ answer: "Silakan tulis pertanyaan Anda agar saya bisa bantu." }, { status: 400 });
+    return NextResponse.json({ answer: "Tolong tulis pertanyaannya supaya saya bisa bantu 😊" }, { status: 400 });
   }
 
   const q = message;
+
+  // Simple detectors for analytics metadata
+  const detectedCategory = q.includes("wisuda") ? "wisuda" : q.includes("wedding") ? "wedding" : null;
+  const smallDateRegex = /(\d{1,2}\s+(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)(\s+\d{4})?)/i;
+  const dateMatch = q.match(smallDateRegex);
+  const detectedDate = dateMatch ? dateMatch[0] : null;
+
+  // Helper to send JSON response and record analytic event (non-blocking on errors).
+  const sendJson = async (payload: any, init?: ResponseInit) => {
+    try {
+      // Avoid saving placeholder values coming from UI instrumentation (e.g. "input" placeholder).
+      const rawValue = (originalMessage || q || "").toString();
+      const placeholderValues = ["input", "potreed", "", null];
+      const safeValue = placeholderValues.includes(rawValue) ? null : rawValue;
+      if (safeValue === null) console.info("analytics: detected placeholder value, storing NULL instead", { rawValue });
+
+      const { error } = await supabaseAdmin.from("analytics_events").insert({
+        event_type: "assistant_interaction",
+        session_id: body?.session_id ?? null,
+        visitor_id: body?.visitor_id ?? null,
+        page: body?.page ?? "assistant",
+        package_id: body?.package_id ?? null,
+        value: safeValue,
+        metadata: JSON.stringify({ response: payload?.answer ?? null, detectedCategory, detectedDate }),
+      });
+
+      if (error) {
+        console.error("analytics insert error:", error);
+      }
+    } catch (e) {
+      console.error("analytics insert failed:", e);
+    }
+
+    return NextResponse.json(payload, init);
+  };
 
   const containsAny = (words: string[]) => words.some((word) => q.includes(word));
   const packageTriggers = ["harga", "paket", "biaya", "detail paket", "daftar paket"];
@@ -46,22 +81,22 @@ export async function POST(request: Request) {
     .limit(1);
 
   if (!faqError && faqData?.length) {
-    return NextResponse.json({ answer: faqData[0].answer ?? "Maaf, jawaban belum tersedia." });
+    return await sendJson({ answer: faqData[0].answer ?? "Maaf, jawabannya belum tersedia. Mau saya bantu cari alternatif?" });
   }
 
   if (greetingTriggers.some((prefix) => q.startsWith(prefix)) && !containsAny(packageTriggers) && !containsAny(portfolioTriggers) && !containsAny(scheduleTriggers)) {
-    return NextResponse.json({ answer: "Halo! Silakan langsung tanya tentang paket, jadwal, atau jenis sesi foto yang Anda butuhkan." });
+    return await sendJson({ answer: "Halo! 👋 Mau tanya tentang paket, jadwal, atau jenis sesi foto? Saya siap bantu." });
   }
 
   if (isGenericAsk && !containsAny(packageTriggers) && !containsAny(portfolioTriggers) && !containsAny(scheduleTriggers)) {
-    return NextResponse.json({
+    return await sendJson({
       answer:
-        "Hai! Silakan ceritakan kebutuhanmu dengan lebih detail, misalnya 'saya butuh paket wedding' atau 'berapa harga paket wisuda'.",
+        "Hai! Ceritakan sedikit kebutuhanmu, misalnya 'butuh paket wedding' atau 'berapa harga paket wisuda', supaya saya bisa bantu.",
     });
   }
 
   if (clarificationTriggers.some((word) => q.includes(word)) && !containsAny(packageTriggers) && !containsAny(portfolioTriggers) && !containsAny(scheduleTriggers)) {
-    return NextResponse.json({ answer: "Saya siap membantu. Silakan beritahu saya apa yang ingin Anda ketahui, misalnya 'berapa harga paket wedding' atau 'apa saja fitur paket wisuda'." });
+    return await sendJson({ answer: "Boleh, saya bantu. Contoh: 'berapa harga paket wedding' atau 'apa saja fitur paket wisuda'." });
   }
 
   if (containsAny(customEventTriggers)) {
@@ -75,29 +110,16 @@ export async function POST(request: Request) {
     if (!error && packages?.length) {
       const pkg = packages[0];
       const harga = typeof pkg.harga === "number" ? new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(pkg.harga) : pkg.harga;
-      return NextResponse.json({
-        answer: `Kami juga memiliki paket Custom Event untuk kebutuhan brand shoot, foto makanan, atau konsep khusus. Contoh:
+      return await sendJson({
+        answer: `Kami juga punya paket Custom Event untuk kebutuhan seperti brand shoot, foto makanan, atau konsep khusus. Contoh:
 • ${pkg.nama_package} (${pkg.kategori ?? "Custom"}) - ${harga}
 
-${pkg.highlight_package ?? "Hubungi kami untuk detail creative briefing, moodboard, dan opsi studio/outdoor."}`,
+${pkg.highlight_package ?? "Kalau mau, kontak kami untuk creative briefing, moodboard, dan opsi studio/outdoor."}`,
       });
     }
   }
 
-  if (containsAny(packageTriggers)) {
-    const { data: packages, error } = await supabase
-      .from("packages")
-      .select("nama_package, kategori, harga, highlight_package")
-      .eq("is_active", true)
-      .order("harga", { ascending: true })
-      .limit(3);
-
-    if (!error && packages) {
-      return NextResponse.json({ answer: buildPackageAnswer(packages) });
-    }
-  }
-
-  // Schedule/date handling should come before portfolio responses so date queries get availability checks.
+  // Schedule/date handling should come before package responses so date queries get availability checks.
   if (containsAny(scheduleTriggers)) {
     // Try to detect explicit date in the query, e.g. "7 juli 2026" or "7 juli"
     const monthMap: Record<string, number> = {
@@ -144,25 +166,73 @@ ${pkg.highlight_package ?? "Hubungi kami untuk detail creative briefing, moodboa
       const monthYear = dateObj.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 
       if (settingsData?.is_only_weekend && !isWeekend) {
-        return NextResponse.json({ answer: `Maaf, kami hanya melayani booking pada akhir pekan di bulan ${monthYear}.` });
+        return await sendJson({ answer: `Oh, untuk bulan ${monthYear} kami melayani hanya akhir pekan. Kalau bisa, coba pilih tanggal akhir pekan atau hubungi kami ya.` });
       }
 
       if (settingsData?.is_only_weekday && isWeekend) {
-        return NextResponse.json({ answer: `Maaf, kami hanya melayani booking pada hari kerja di bulan ${monthYear}.` });
+        return await sendJson({ answer: `Oh, untuk bulan ${monthYear} kami hanya melayani hari kerja. Coba pilih hari kerja lain atau hubungi kami untuk bantuan.` });
       }
 
       const bookedCount = bookingsError ? 0 : bookingsData?.length ?? 0;
       if (bookedCount >= sessionLimit) {
-        return NextResponse.json({ answer: `Maaf, tanggal ${dateObj.toLocaleDateString("id-ID")} sudah penuh. Silakan pilih tanggal lain atau hubungi kami untuk bantuan.` });
+        return await sendJson({ answer: `Waduh, tanggal ${dateObj.toLocaleDateString("id-ID")} sudah penuh. Mau coba tanggal lain atau minta bantuan kami?` });
       }
 
-      return NextResponse.json({ answer: `Tanggal ${dateObj.toLocaleDateString("id-ID")} tersedia untuk booking. Jika ingin lanjut, beri tahu paket yang Anda pilih atau ketik 'booking' untuk instruksi selanjutnya.` });
+      // If the user already mentioned a specific category (e.g., "wisuda" or "wedding") in the same query,
+      // return the available packages for that category immediately. Otherwise, ask a follow-up question.
+      const specificCategory = q.includes("wisuda") ? "wisuda" : q.includes("wedding") ? "wedding" : null;
+      if (specificCategory) {
+        const { data: packages, error } = await supabase
+          .from("packages")
+          .select("nama_package, kategori, harga, highlight_package")
+          .eq("is_active", true)
+          .ilike("kategori", `%${specificCategory}%`)
+          .order("harga", { ascending: true })
+          .limit(3);
+
+        if (!error && packages && packages.length) {
+          const header = `Mantap! tanggal ${dateObj.toLocaleDateString("id-ID")} tersedia untuk booking!`;
+          return await sendJson({ answer: `${header}\n\n${buildPackageAnswer(packages)}` });
+        }
+      }
+
+      return await sendJson({ answer: `Mantap! tanggal ${dateObj.toLocaleDateString("id-ID")} tersedia untuk booking! Untuk acara apa ya? (mis. "wisuda", "wedding", atau lainnya). Jawab singkat supaya saya bisa rekomendasikan paket yang cocok.` });
     }
 
-    return NextResponse.json({
+    return await sendJson({
       answer:
-        "Untuk cek jadwal, kamu bisa buka halaman jadwal dan pilih tanggal yang tersedia. Jika ingin booking, pilih tanggal lalu pilih jenis acara.",
+        "Untuk cek jadwal, buka halaman jadwal dan pilih tanggal yang tersedia. Mau saya bantu pilih tanggal juga?",
     });
+  }
+
+  // Show packages when user asks about packages or explicitly mentions a package category like "wisuda" or "wedding".
+  if (containsAny(packageTriggers) || q.includes("wisuda") || q.includes("wedding")) {
+    const specificCategory = q.includes("wisuda") ? "wisuda" : q.includes("wedding") ? "wedding" : null;
+
+    if (specificCategory) {
+      const { data: packages, error } = await supabase
+        .from("packages")
+        .select("nama_package, kategori, harga, highlight_package")
+        .eq("is_active", true)
+        .ilike("kategori", `%${specificCategory}%`)
+        .order("harga", { ascending: true })
+        .limit(3);
+
+      if (!error && packages) {
+        return await sendJson({ answer: buildPackageAnswer(packages) });
+      }
+    } else {
+      const { data: packages, error } = await supabase
+        .from("packages")
+        .select("nama_package, kategori, harga, highlight_package")
+        .eq("is_active", true)
+        .order("harga", { ascending: true })
+        .limit(3);
+
+      if (!error && packages) {
+        return await sendJson({ answer: buildPackageAnswer(packages) });
+      }
+    }
   }
 
   if (containsAny(portfolioTriggers)) {
@@ -176,13 +246,13 @@ ${pkg.highlight_package ?? "Hubungi kami untuk detail creative briefing, moodboa
 
     if (!error && portfolios?.length) {
       const lines = portfolios.map((item) => `• ${item.judul}: ${item.deskripsi}`);
-      return NextResponse.json({ answer: `Berikut beberapa contoh portfolio ${category}:
+      return await sendJson({ answer: `Berikut beberapa contoh portfolio ${category}:
 ${lines.join("\n")}` });
     }
   }
 
-  return NextResponse.json({
+  return await sendJson({
     answer:
-      "Maaf, saya belum bisa menjawab itu dengan tepat. Silakan tanyakan kembali dengan kata kunci seperti 'paket', 'harga', 'wisuda', 'wedding', atau 'jadwal'.",
+      "Maaf, saya belum bisa menjawab itu. Coba gunakan kata kunci seperti 'paket', 'harga', 'wisuda', 'wedding', atau 'jadwal', ya.",
   });
 }

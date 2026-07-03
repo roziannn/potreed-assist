@@ -6,6 +6,14 @@ import { usePathname, useSearchParams } from "next/navigation";
 const SESSION_KEY = "analytics-session-id";
 const VISITOR_KEY = "analytics-visitor-id";
 
+const EXCLUDED_PAGE_VIEW_PATHS = ["/", "/portfolio", "/portfolio/", "/packages", "/testimonials", "/admin", "/admin/", "/schedule"];
+
+function isExcludedPageView(page: string) {
+  return EXCLUDED_PAGE_VIEW_PATHS.some((excluded) =>
+    excluded.endsWith("/") ? page.startsWith(excluded) : page === excluded
+  );
+}
+
 function generateId() {
   return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
     ? crypto.randomUUID()
@@ -32,7 +40,7 @@ function getVisitorId() {
   return visitorId;
 }
 
-async function sendAnalyticsEvent(payload: {
+export async function sendAnalyticsEvent(payload: {
   session_id: string | null;
   visitor_id: string | null;
   event_type: string;
@@ -56,7 +64,9 @@ async function sendAnalyticsEvent(payload: {
 
 function normalizeTarget(target: HTMLElement | null) {
   if (!target) return null;
-  return target.closest("a,button,input,textarea,select,[role='button'],[data-analytics]") as HTMLElement | null;
+  // Opt-in only: hanya elemen yang sengaja ditandai data-analytics yang di-track.
+  // Ini menghindari noise dari nav link, tombol UI umum, form field, dsb.
+  return target.closest("[data-analytics]") as HTMLElement | null;
 }
 
 export function AnalyticsTracker() {
@@ -65,9 +75,11 @@ export function AnalyticsTracker() {
   typeof window !== "undefined" ? window.location.search : "";
 
   useEffect(() => {
+    const page = pathname || "/";
+    if (isExcludedPageView(page)) return;
+
     const session_id = getSessionId();
     const visitor_id = getVisitorId();
-    const page = pathname || "/";
 
     sendAnalyticsEvent({
       session_id,
@@ -90,17 +102,29 @@ export function AnalyticsTracker() {
       const element = normalizeTarget(target);
       if (!element) return;
 
-      const analyticsType = element.getAttribute("data-analytics") || "generic_click";
+      // Skip elements that already have their own dedicated tracking
+      // (e.g. everything inside the FloatingChat widget is tracked via /api/assistant instead).
+      if (element.closest("[data-analytics-ignore]")) return;
+
+      const analyticsType = element.getAttribute("data-analytics")!; // guaranteed by normalizeTarget
+      const explicitValue = element.getAttribute("data-analytics-value");
+      const packageId = element.getAttribute("data-analytics-package-id") || null;
       const text = element.textContent?.trim() || null;
       const href = element instanceof HTMLAnchorElement ? element.href : null;
       const tagName = element.tagName.toLowerCase();
+
+      // Prefer explicit clean value (data-analytics-value) over raw textContent,
+      // which can end up being a jumble of concatenated child text (title + description, etc).
+      const label = explicitValue || text || href;
+      if (!label) return;
 
       sendAnalyticsEvent({
         session_id,
         visitor_id,
         event_type: analyticsType,
         page: pathname || "/",
-        value: text || href || tagName,
+        package_id: packageId,
+        value: label,
         metadata: {
           tag: tagName,
           href,

@@ -696,6 +696,9 @@ export default function PackagesPage() {
                         )}
                         target="_blank"
                         rel="noreferrer"
+                        data-analytics="package_inquiry_click"
+                        data-analytics-value="Tanya paket ini"
+                        data-analytics-package-id={pkg.id}
                       >
                         Tanya paket ini
                       </a>

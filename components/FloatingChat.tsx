@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+// import { sendAnalyticsEvent } from "@/components/AnalyticsTracker";
 
 type Message = { id: number; text: string; sender: "user" | "ai"; image?: string };
 
@@ -55,7 +56,12 @@ export function FloatingChat() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({
+          message: input,
+          session_id: typeof window !== "undefined" ? sessionStorage.getItem("analytics-session-id") : null,
+          visitor_id: typeof window !== "undefined" ? localStorage.getItem("analytics-visitor-id") : null,
+          page: "/assistant",
+        }),
       });
 
       const data = await response.json();
@@ -114,7 +120,7 @@ export function FloatingChat() {
                 {messages.map((m) => (
                   <div key={m.id} className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}>
                     <div
-                      className={`max-w-[88%] rounded-3xl p-4 text-sm leading-6 sm:text-[15px] ${
+                      className={`max-w-[88%] rounded-3xl p-4 text-sm leading-6 sm:text-[15px] whitespace-pre-line ${
                         m.sender === "user"
                           ? "rounded-br-md bg-sky-600 text-white"
                           : "rounded-bl-md bg-sky-50 text-slate-700"

@@ -72,6 +72,8 @@ export default function PortfolioPage() {
               <Link
                 key={item.id ?? index}
                 href={`/portfolio/${item.id}`}
+                data-analytics="portfolio_click"
+                data-analytics-value={item.judul}
                 className="block overflow-hidden rounded-[2rem] border border-white/70 bg-white/80 shadow-[0_24px_100px_-56px_rgba(15,23,42,0.5)] backdrop-blur-xl hover:scale-[1.01] transition-transform"
               >
                 <div
