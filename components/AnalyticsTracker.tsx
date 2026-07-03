@@ -109,6 +109,7 @@ export function AnalyticsTracker() {
       const analyticsType = element.getAttribute("data-analytics")!; // guaranteed by normalizeTarget
       const explicitValue = element.getAttribute("data-analytics-value");
       const packageId = element.getAttribute("data-analytics-package-id") || null;
+      const pageOverride = element.getAttribute("data-analytics-page");
       const text = element.textContent?.trim() || null;
       const href = element instanceof HTMLAnchorElement ? element.href : null;
       const tagName = element.tagName.toLowerCase();
@@ -122,7 +123,7 @@ export function AnalyticsTracker() {
         session_id,
         visitor_id,
         event_type: analyticsType,
-        page: pathname || "/",
+        page: pageOverride || pathname || "/",
         package_id: packageId,
         value: label,
         metadata: {

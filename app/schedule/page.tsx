@@ -234,6 +234,14 @@ export default function SchedulePage() {
               type="button"
               className="h-12 w-full rounded-full bg-sky-600 font-bold shadow-lg shadow-sky-200 hover:bg-sky-700"
               disabled={!selectedDate || !whatsappNumber || !selectedEventType}
+              data-analytics="booking_click"
+              data-analytics-value={
+                selectedDate && selectedEventType
+                   ? `${selectedDate} ${currentDate.toLocaleString("id-ID", { month: "long", year: "numeric" })}|${
+                      eventOptions.find((option) => option.id === selectedEventType)?.label
+                    }`
+                  : undefined
+              }
               onClick={() => {
                 if (!selectedDate || !whatsappNumber || !selectedEventType) return;
                 const eventLabel = eventOptions.find((option) => option.id === selectedEventType)?.label.toLowerCase() ?? 'event';

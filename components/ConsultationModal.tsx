@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
+import { data } from "framer-motion/m";
 
 const consultationPackages = [
   "Paket Wisuda",
@@ -131,6 +132,9 @@ export function ConsultationModal() {
                 key={pkg}
                 variant="outline"
                 className="h-14 justify-between rounded-2xl border-sky-100 bg-sky-50/40 px-4 text-left hover:bg-sky-50"
+                data-analytics="consultation_package_click"
+                data-analytics-value={pkg}
+                data-analytics-page="/landing/konsultasi-sesi"
                 onClick={() => {
                   const message = `Halo, saya mau tanya-tanya ${pkg}.`;
                   window.open(

@@ -122,6 +122,9 @@ export default function PackagesPage() {
   const [selectedTimeline, setSelectedTimeline] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
 
+  const [minBudget, setMinBudget] = useState(500_000);
+  const [maxBudget, setMaxBudget] = useState(5_000_000);  
+
   const resetWizard = () => {
     setStep(1);
     setBudget(2_500_000);
@@ -237,7 +240,7 @@ export default function PackagesPage() {
               Bingung pilih paket?
             </p>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Gunakan floating AI untuk tanya harga, tanggal, atau paket paling pas sesuai budget.
+              Kami bisa rekomendasikan paket yang paling sesuai dengan kebutuhanmu!
             </p>
 
             <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -284,25 +287,67 @@ export default function PackagesPage() {
 
                 {/* STEP 1: Budget */}
                 {step === 1 && (
-                  <div className="space-y-3">
+                  <div className="space-y-5">
                     <p className="text-sm font-semibold text-slate-800">
                       Berapa estimasi budget kamu?
                     </p>
+
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-slate-500">Range budget</span>
-                      <span className="rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-700">
-                        {formatRupiah(budget)}
-                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-700">
+                          {formatRupiah(minBudget)}
+                        </span>
+
+                        <span className="text-slate-400">-</span>
+
+                        <span className="rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-700">
+                          {formatRupiah(maxBudget)}
+                        </span>
+                      </div>
                     </div>
-                    <input
-                      type="range"
-                      min={MIN_BUDGET}
-                      max={MAX_BUDGET}
-                      step={250_000}
-                      value={budget}
-                      onChange={(event) => setBudget(Number(event.target.value))}
-                      className="w-full accent-sky-600"
-                    />
+
+                    {/* Minimum */}
+                    <div>
+                      <label className="mb-2 block text-xs text-slate-500">
+                        Budget minimum
+                      </label>
+
+                      <input
+                        type="range"
+                        min={MIN_BUDGET}
+                        max={MAX_BUDGET}
+                        step={250000}
+                        value={minBudget}
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          setMinBudget(Math.min(value, maxBudget));
+                        }}
+                        className="w-full accent-sky-600"
+                      />
+                    </div>
+
+                    {/* Maximum */}
+                    <div>
+                      <label className="mb-2 block text-xs text-slate-500">
+                        Budget maksimum
+                      </label>
+
+                      <input
+                        type="range"
+                        min={MIN_BUDGET}
+                        max={MAX_BUDGET}
+                        step={250000}
+                        value={maxBudget}
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          setMaxBudget(Math.max(value, minBudget));
+                        }}
+                        className="w-full accent-sky-600"
+                      />
+                    </div>
+
                     <div className="flex justify-between text-xs text-slate-400">
                       <span>{formatRupiah(MIN_BUDGET)}</span>
                       <span>{formatRupiah(MAX_BUDGET)}</span>
@@ -517,7 +562,7 @@ export default function PackagesPage() {
                 {/* STEP 8: Hasil rekomendasi */}
                 {step === RESULT_STEP && recommendedPackage && (
                   <div className="space-y-4">
-                    <div className="mb-1 flex items-center gap-2">
+                    <div className="mb-1 flex items-center gap-2 mb-6">
                       <div className="rounded-full bg-emerald-50 p-2 text-emerald-700">
                         <Check className="size-4" />
                       </div>
