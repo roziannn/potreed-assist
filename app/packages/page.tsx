@@ -21,6 +21,7 @@ import {
   Clock,
   CalendarClock,
   Hourglass,
+  CheckCircle2,
 } from "lucide-react";
 import { FloatingChat } from "@/components/FloatingChat";
 import { Navbar } from "@/components/Navbar";
@@ -38,7 +39,7 @@ type PackageItem = {
   id: string;
   nama_package: string;
   kategori: string;
-  harga: number | string;
+  harga: number;
   highlight_package?: string;
   deskripsi_singkat?: string;
   is_active?: boolean;
@@ -76,8 +77,9 @@ const timelineOptions = [
   { id: "flexible", label: "Masih fleksibel", icon: CalendarClock },
 ];
 
-const MIN_BUDGET = 500_000;
-const MAX_BUDGET = 10_000_000;
+
+const MIN_harga = 300_000;
+const MAX_harga = 10_000_000;
 const FALLBACK_WHATSAPP_NUMBER = "6281231931";
 // step 1-5 pertanyaan, 6 ringkasan, 7 loading, 8 hasil
 const QUESTION_STEPS = 6;
@@ -114,7 +116,6 @@ export default function PackagesPage() {
   const [packages, setPackages] = useState<PackageItem[]>([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
 
-  const [budget, setBudget] = useState(2_500_000);
   const [selectedType, setSelectedType] = useState("");
   const [selectedEvent, setSelectedEvent] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
@@ -122,12 +123,11 @@ export default function PackagesPage() {
   const [selectedTimeline, setSelectedTimeline] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
 
-  const [minBudget, setMinBudget] = useState(500_000);
-  const [maxBudget, setMaxBudget] = useState(5_000_000);  
+  const [minharga, setMinharga] = useState(500_000);
+  const [maxharga, setMaxharga] = useState(5_000_000);  
 
   const resetWizard = () => {
     setStep(1);
-    setBudget(2_500_000);
     setSelectedType("");
     setSelectedEvent("");
     setSelectedLocation("");
@@ -196,23 +196,49 @@ export default function PackagesPage() {
     (step === 4 && (!selectedLocation || !selectedDuration)) ||
     (step === 5 && !selectedTimeline);
 
-  // logic rekomendasi paket
-  const recommendedPackage = (() => {
-    if (!packages.length) return null;
+ const recommendedPackage = (() => {
+  if (!packages.length) return null;
 
-    const typeKeyword = selectedTypeLabel?.toLowerCase() ?? "";
-    const matchingCategory = packages.filter((pkg) =>
-      typeKeyword ? pkg.kategori.toLowerCase().includes(typeKeyword.split(" ")[0]) : false
-    );
+  const serviceMap: Record<string, string> = {
+    photo: "Photography",
+    video: "Videography",
+    social: "Social Media",
+    food: "Food",
+  };
 
-    const pool = matchingCategory.length > 0 ? matchingCategory : packages;
+  const selectedCategory = serviceMap[selectedType];
 
-    return pool.reduce<PackageItem>((closest, pkg) => {
-      const pkgPrice = parsePriceToNumber(pkg.harga);
-      const closestPrice = parsePriceToNumber(closest.harga);
-      return Math.abs(pkgPrice - budget) < Math.abs(closestPrice - budget) ? pkg : closest;
-    }, pool[0]);
-  })();
+  // filter kategori dulu
+  const categoryPackages = packages.filter(
+    (pkg) => pkg.kategori === selectedCategory
+  );
+
+  const pool = categoryPackages.length ? categoryPackages : packages;
+
+  // cr package yang masuk dalam range budget
+  const inRange = pool.filter(
+    (pkg) => pkg.harga >= minharga && pkg.harga <= maxharga
+  );
+
+  // klo ada yang masuk range, ambil yang paling murah
+  if (inRange.length) {
+    return inRange.sort((a, b) => a.harga - b.harga)[0];
+  }
+
+  return pool.reduce((closest, pkg) => {
+    const currentDistance =
+      pkg.harga < minharga
+        ? minharga - pkg.harga
+        : pkg.harga - maxharga;
+
+    const closestDistance =
+      closest.harga < minharga
+        ? minharga - closest.harga
+        : closest.harga - maxharga;
+
+    return currentDistance < closestDistance ? pkg : closest;
+  });
+})();
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(186,230,253,0.7),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#f8fafc_45%,_#fff7ed_100%)] pb-24">
@@ -230,7 +256,7 @@ export default function PackagesPage() {
               <span className="block text-sky-600">siap dipilih calon client.</span>
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
-              Semua paket disusun untuk memudahkan calon client membandingkan budget, kebutuhan coverage, dan hasil akhir tanpa harus chat panjang dulu.
+              Semua paket disusun untuk memudahkan calon client membandingkan harga, kebutuhan coverage, dan hasil akhir tanpa harus chat panjang dulu.
             </p>
           </div>
 
@@ -285,25 +311,25 @@ export default function PackagesPage() {
                   </>
                 )}
 
-                {/* STEP 1: Budget */}
+                {/* STEP 1: harga */}
                 {step === 1 && (
                   <div className="space-y-5">
                     <p className="text-sm font-semibold text-slate-800">
-                      Berapa estimasi budget kamu?
+                      Berapa estimasi harga kamu?
                     </p>
 
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-500">Range budget</span>
+                      <span className="text-sm text-slate-500">Range harga</span>
 
                       <div className="flex items-center gap-2">
                         <span className="rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-700">
-                          {formatRupiah(minBudget)}
+                          {formatRupiah(minharga)}
                         </span>
 
                         <span className="text-slate-400">-</span>
 
                         <span className="rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-700">
-                          {formatRupiah(maxBudget)}
+                          {formatRupiah(maxharga)}
                         </span>
                       </div>
                     </div>
@@ -311,18 +337,18 @@ export default function PackagesPage() {
                     {/* Minimum */}
                     <div>
                       <label className="mb-2 block text-xs text-slate-500">
-                        Budget minimum
+                        harga minimum
                       </label>
 
                       <input
                         type="range"
-                        min={MIN_BUDGET}
-                        max={MAX_BUDGET}
+                        min={MIN_harga}
+                        max={MAX_harga}
                         step={250000}
-                        value={minBudget}
+                        value={minharga}
                         onChange={(e) => {
                           const value = Number(e.target.value);
-                          setMinBudget(Math.min(value, maxBudget));
+                          setMinharga(Math.min(value, maxharga));
                         }}
                         className="w-full accent-sky-600"
                       />
@@ -331,26 +357,26 @@ export default function PackagesPage() {
                     {/* Maximum */}
                     <div>
                       <label className="mb-2 block text-xs text-slate-500">
-                        Budget maksimum
+                        harga maksimum
                       </label>
 
                       <input
                         type="range"
-                        min={MIN_BUDGET}
-                        max={MAX_BUDGET}
+                        min={MIN_harga}
+                        max={MAX_harga}
                         step={250000}
-                        value={maxBudget}
+                        value={maxharga}
                         onChange={(e) => {
                           const value = Number(e.target.value);
-                          setMaxBudget(Math.max(value, minBudget));
+                          setMaxharga(Math.max(value, minharga));
                         }}
                         className="w-full accent-sky-600"
                       />
                     </div>
 
                     <div className="flex justify-between text-xs text-slate-400">
-                      <span>{formatRupiah(MIN_BUDGET)}</span>
-                      <span>{formatRupiah(MAX_BUDGET)}</span>
+                      <span>{formatRupiah(MIN_harga)}</span>
+                      <span>{formatRupiah(MAX_harga)}</span>
                     </div>
                   </div>
                 )}
@@ -508,33 +534,50 @@ export default function PackagesPage() {
                   <div className="space-y-4">
                     <div className="rounded-2xl border border-sky-100 bg-sky-50/50 p-4">
                       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-sky-700">
-                        <Check className="size-4" />
+                        <CheckCircle2 className="size-4" />
                         Ringkasan kebutuhanmu
                       </div>
-                      <div className="space-y-2 text-sm text-slate-700">
+                      <div className="space-y-3 text-sm">
                         <div className="flex justify-between">
                           <span className="text-slate-500">Budget</span>
-                          <span className="font-semibold">{formatRupiah(budget)}</span>
+                          <span className="font-semibold text-right">
+                            {formatRupiah(minharga)} – {formatRupiah(maxharga)}
+                          </span>
                         </div>
+
                         <div className="flex justify-between">
                           <span className="text-slate-500">Tipe layanan</span>
-                          <span className="font-semibold">{selectedTypeLabel ?? "-"}</span>
+                          <span className="font-semibold text-right">
+                            {selectedTypeLabel}
+                          </span>
                         </div>
+
                         <div className="flex justify-between">
                           <span className="text-slate-500">Jenis acara</span>
-                          <span className="font-semibold">{selectedEventLabel ?? "-"}</span>
+                          <span className="font-semibold text-right">
+                            {selectedEventLabel}
+                          </span>
                         </div>
+
                         <div className="flex justify-between">
                           <span className="text-slate-500">Lokasi</span>
-                          <span className="font-semibold">{selectedLocationLabel ?? "-"}</span>
+                          <span className="font-semibold text-right">
+                            {selectedLocationLabel}
+                          </span>
                         </div>
+
                         <div className="flex justify-between">
                           <span className="text-slate-500">Durasi</span>
-                          <span className="font-semibold">{selectedDurationLabel ?? "-"}</span>
+                          <span className="font-semibold text-right">
+                            {selectedDurationLabel}
+                          </span>
                         </div>
+
                         <div className="flex justify-between">
                           <span className="text-slate-500">Target tanggal</span>
-                          <span className="font-semibold">{selectedTimelineLabel ?? "-"}</span>
+                          <span className="font-semibold text-right">
+                            {selectedTimelineLabel}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -553,7 +596,7 @@ export default function PackagesPage() {
                         Mencari paket paling pas buat kamu...
                       </p>
                       <p className="mt-1 text-xs text-slate-400">
-                        Sebentar ya, lagi dicocokkan dengan budget & kebutuhanmu
+                        Sebentar ya, lagi dicocokkan dengan harga & kebutuhanmu
                       </p>
                     </div>
                   </div>
@@ -603,7 +646,7 @@ export default function PackagesPage() {
                             .split(",")
                             .map((item) => item.trim())
                             .filter(Boolean)
-                            .slice(0, 3)
+                            .slice(0, 5)
                             .map((feature) => (
                               <div
                                 key={feature}
