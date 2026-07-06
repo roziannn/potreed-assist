@@ -66,8 +66,8 @@ export function SummarySection() {
 
         <InsightPanel
           icon={<Sparkles className="size-4" />}
-          title="Paket yang sering dicek"
-          subtitle={`Total page/package views: ${totalPackageViews.toLocaleString("id-ID")}`}
+          title="Paket yang sering ditanya"
+          subtitle={`Total page/package asked: ${totalPackageViews.toLocaleString("id-ID")}`}
         >
           {mostCheckedPackages.map((item) => (
             <div
@@ -108,7 +108,7 @@ export function SummarySection() {
         <InsightPanel
           icon={<BarChart3 className="size-4" />}
           title="Budget range terbanyak"
-          subtitle="Bisa dipakai untuk menyusun positioning harga dan promo"
+          subtitle="Bisa dipakai untuk positioning harga dan promo"
         >
           {budgetRanges.map((item) => (
             <div key={item.label} className="rounded-2xl bg-slate-50 px-4 py-3">

@@ -53,7 +53,7 @@ export default async function PortfolioDetailPage({ params }: Props) {
             <div className="bg-white/80 backdrop-blur rounded-2xl p-6 max-w-3xl">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
+                  <div className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold uppercase text-sky-700">
                     {portfolio?.kategori ?? "Portfolio"}
                   </div>
                   <Camera className="size-4 text-slate-400" />

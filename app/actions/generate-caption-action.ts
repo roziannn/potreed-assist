@@ -1,6 +1,8 @@
 "use server";
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { isRateLimitError } from "@/lib/assistant-fallback";
+import { generateFallbackCaption } from "@/lib/caption-fallback";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -56,12 +58,30 @@ Tulis HANYA teks captionnya saja, tanpa tanda kutip di awal/akhir, tanpa judul, 
   try {
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
-    return { success: true as const, caption: text };
+    return { success: true as const, caption: text, isFallback: false as const };
   } catch (err: any) {
     console.error("DEBUG ERROR GEMINI (generatePortfolioCaption):", err);
+
+    // Kalau kena rate limit / quota exceeded, tetap kasih caption (dari template)
+    // supaya user tidak stuck cuma karena limit AI harian habis.
+    if (isRateLimitError(err)) {
+      const fallbackCaption = generateFallbackCaption({
+        judul: input.judul || "Sesi terbaru",
+        kategori: input.kategori || "Portfolio",
+        deskripsi: input.deskripsi || "",
+        tone: input.tone,
+        captionLength: input.captionLength,
+        captionPlatform: input.captionPlatform,
+        useEmoji: input.useEmoji,
+      });
+
+      return { success: true as const, caption: fallbackCaption, isFallback: true as const };
+    }
+
     return {
       success: false as const,
       error: err?.message || "Gagal generate caption, coba lagi.",
+      isFallback: false as const,
     };
   }
 }
