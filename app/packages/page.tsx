@@ -177,12 +177,26 @@ export default function PackagesPage() {
   const goNext = () => setStep((s) => Math.min(QUESTION_STEPS, s + 1));
   const goBack = () => setStep((s) => Math.max(1, s - 1));
 
-  const handleSeeRecommendation = () => {
-    setStep(LOADING_STEP);
-    setTimeout(() => {
-      setStep(RESULT_STEP);
-    }, 1800);
+const handleSeeRecommendation = async () => {
+  setStep(LOADING_STEP);
+
+  const payload = {
+    budget_min: minharga,
+    budget_max: maxharga,
+    tipe_layanan: selectedTypeLabel,
+    jenis_acara: selectedEventLabel,
+    lokasi: selectedLocationLabel,
+    durasi: selectedDurationLabel,
+    target_tanggal: selectedTimelineLabel,
+    recommended_package_id: recommendedPackage?.id || null,
   };
+
+  await handleSubmitClientNeeds(payload);
+
+  setTimeout(() => {
+    setStep(RESULT_STEP);
+  }, 1800);
+};
 
   const selectedTypeLabel = serviceTypes.find((t) => t.id === selectedType)?.label;
   const selectedEventLabel = eventTypes.find((e) => e.id === selectedEvent)?.label;
@@ -239,6 +253,19 @@ export default function PackagesPage() {
     return currentDistance < closestDistance ? pkg : closest;
   });
 })();
+
+const handleSubmitClientNeeds = async (payload: any) => {
+  const { data, error } = await supabase
+    .from("client_needs")
+    .insert([payload])
+    .select(); 
+  if (error) {
+    console.error("Gagal menyimpan lead:", error);
+    return { success: false };
+  }
+
+  return { success: true, id: data?.[0]?.id };
+};
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(186,230,253,0.7),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#f8fafc_45%,_#fff7ed_100%)] pb-24">

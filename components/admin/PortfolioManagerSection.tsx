@@ -1,21 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PencilLine, Plus, Sparkles, Trash2 } from "lucide-react";
+import { PencilLine, Plus, Sparkles, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
 import { supabase } from "@/lib/supabase";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "../ui/dialog";
-
-function generateCaption(input: { title: string; category: string; description: string; tone: string; }) {
-  const toneMap: Record<string, string> = {
-    elegan: "mengalir elegan dan terasa premium",
-    hangat: "hangat, dekat, dan natural",
-    editorial: "lebih bold, rapi, dan terasa editorial",
-  };
-  const toneText = toneMap[input.tone] ?? toneMap.hangat;
-  return `${input.title || "Sesi terbaru"} dari kategori ${input.category || "portfolio"} hadir dengan visual yang ${toneText}. ${input.description || "Momen utamanya terasa intim dan penuh detail kecil."} Jika kamu ingin konsep serupa, tim kami bisa bantu siapkan moodboard dan paket yang paling pas.`;
-}
+import { generatePortfolioCaption } from "@/app/actions/generate-caption-action";
 
 export function PortfolioManagerSection() {
   const { showToast } = useToast();
@@ -25,12 +16,17 @@ export function PortfolioManagerSection() {
   const [formData, setFormData] = useState({ judul: "", kategori: "Wedding", deskripsi: "", thumbnail_url: "", is_active: true});
   const [captionTone, setCaptionTone] = useState("hangat");
   const [generatedCaption, setGeneratedCaption] = useState("");
+  const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Array<{ id: string; name: string; url: string; storagePath: string }>>([]);
   const [loadingUploadedFiles, setLoadingUploadedFiles] = useState(false);
   const [stagedUploads, setStagedUploads] = useState<Array<{ name: string; url?: string; path: string; uploading: boolean; saved?: boolean }>>([]);
   const bucketName = "portfolios";
+
+  const [captionLength, setCaptionLength] = useState("sedang");
+  const [captionPlatform, setCaptionPlatform] = useState("instagram");
+  const [useEmoji, setUseEmoji] = useState(true);
 
   async function fetchUploadedFiles() {
     try {
@@ -237,21 +233,68 @@ export function PortfolioManagerSection() {
 
   const handleSelectPortfolio = (item: any) => {
     setSelectedPortfolio(item);
-    setFormData({ 
-      judul: item.judul, 
-      kategori: item.kategori, 
-      deskripsi: item.deskripsi, 
+    setFormData({
+      judul: item.judul,
+      kategori: item.kategori,
+      deskripsi: item.deskripsi,
       thumbnail_url: item.thumbnail_url || "",
-      is_active: item.is_active ?? true 
+      is_active: item.is_active ?? true
     });
+    // muat kembali data caption yang tersimpan di DB
+    setGeneratedCaption(item.caption || "");
+    setCaptionLength(item.captionLength || "sedang");
+    setCaptionPlatform(item.forPlatform || "instagram");
+    setUseEmoji(item.isEmoji ?? true);
+  };
+
+  const handleGenerateCaption = async () => {
+    if (!formData.judul && !formData.deskripsi) {
+      showToast('Lengkapi judul atau deskripsi dulu', 'Supaya AI punya bahan untuk membuat caption.', 'error');
+      return;
+    }
+
+    setIsGeneratingCaption(true);
+    try {
+      const result = await generatePortfolioCaption({
+        judul: formData.judul,
+        kategori: formData.kategori,
+        deskripsi: formData.deskripsi,
+        tone: captionTone,
+        captionLength,
+        captionPlatform,
+        useEmoji,
+      });
+
+      if (!result.success) {
+        showToast('Gagal generate caption', result.error, 'error');
+        return;
+      }
+
+      setGeneratedCaption(result.caption);
+    } catch (err: any) {
+      console.error('DEBUG ERROR (handleGenerateCaption):', err);
+      showToast('Gagal generate caption', err?.message || 'Terjadi kesalahan, coba lagi.', 'error');
+    } finally {
+      setIsGeneratingCaption(false);
+    }
   };
 
   const handleSave = async () => {
-    const payload = { judul: formData.judul, kategori: formData.kategori, deskripsi: formData.deskripsi, thumbnail_url: formData.thumbnail_url, is_active: formData.is_active };
-    const { error } = selectedPortfolio 
+    const payload = {
+      judul: formData.judul,
+      kategori: formData.kategori,
+      deskripsi: formData.deskripsi,
+      thumbnail_url: formData.thumbnail_url,
+      is_active: formData.is_active,
+      caption: generatedCaption,
+      isEmoji: useEmoji,
+      captionLength,
+      forPlatform: captionPlatform,
+    };
+    const { error } = selectedPortfolio
       ? await supabase.from("portfolios").update(payload).eq("id", selectedPortfolio.id)
       : await supabase.from("portfolios").insert([payload]);
-    
+
     if (error) showToast("Gagal menyimpan portfolio", error.message, "error");
     else { showToast("Portfolio tersimpan", "Portfolio berhasil disimpan dan diperbarui."); fetchPortfolios(); handleAddNew(); }
   };
@@ -260,6 +303,10 @@ export function PortfolioManagerSection() {
     setSelectedPortfolio(null);
     setFormData({ judul: "", kategori: "Wedding", deskripsi: "", thumbnail_url: "", is_active: true });
     setGeneratedCaption("");
+    setCaptionTone("hangat");
+    setCaptionLength("sedang");
+    setCaptionPlatform("instagram");
+    setUseEmoji(true);
   };
 
   return (
@@ -402,7 +449,11 @@ export function PortfolioManagerSection() {
                 className="w-full rounded-2xl border border-slate-200 bg-amber-50/30 px-4 py-3 text-sm outline-none focus:border-amber-400"
               >
                 <option value="Wedding">Wedding</option>
+                <option value="Engagement">Engagement</option>
                 <option value="Wisuda">Wisuda</option>
+                <option value="Birthday">Birthday Party</option>
+                <option value="Personal">Personal Branding</option>
+                <option value="Produk">Produk/Komersial</option>
                 <option value="Custom">Custom</option>
               </select>
             </Field>
@@ -431,6 +482,48 @@ export function PortfolioManagerSection() {
               </select>
             </Field>
 
+            <Field label="Panjang caption">
+              <select
+                value={captionLength}
+                onChange={(e) => setCaptionLength(e.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-amber-50/30 px-4 py-3 text-sm outline-none focus:border-amber-400"
+              >
+                <option value="pendek">Pendek</option>
+                <option value="sedang">Sedang</option>
+                <option value="panjang">Panjang</option>
+              </select>
+            </Field>
+
+            <Field label="Platform tujuan">
+              <select
+                value={captionPlatform}
+                onChange={(e) => setCaptionPlatform(e.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-amber-50/30 px-4 py-3 text-sm outline-none focus:border-amber-400"
+              >
+                <option value="instagram">Instagram</option>
+                <option value="tiktok">TikTok</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="website">Website</option>
+              </select>
+            </Field>
+
+            <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-amber-50/30 px-4 py-3">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-slate-700">Gunakan emoji</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUseEmoji(!useEmoji)}
+                className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${
+                  useEmoji ? "bg-amber-500" : "bg-slate-300"
+                }`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                  useEmoji ? "translate-x-8" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+
             {/* Area Draft Caption */}
             <div className="rounded-[1.5rem] border border-amber-100 bg-amber-50/55 p-4 sm:col-span-2">
               <div className="mb-3 flex items-center gap-2 text-slate-900">
@@ -438,7 +531,9 @@ export function PortfolioManagerSection() {
                 <p className="text-sm font-semibold">Draft caption</p>
               </div>
               <div className="min-h-36 rounded-2xl border border-white/80 bg-white p-4 text-sm leading-6 text-slate-600">
-                {generatedCaption || "Caption hasil AI akan muncul di sini setelah Anda klik generate."}
+                {isGeneratingCaption
+                  ? "AI sedang menulis caption..."
+                  : generatedCaption || "Caption hasil AI akan muncul di sini setelah Anda klik generate."}
               </div>
             </div>
 
@@ -467,21 +562,19 @@ export function PortfolioManagerSection() {
             <div className="sm:col-span-2 flex flex-wrap gap-3 mt-2">
               <Button
                 type="button"
-                className="h-11 rounded-2xl bg-amber-500 px-5 text-white hover:bg-amber-600"
-                onClick={() =>
-                  setGeneratedCaption(
-                    generateCaption({
-                      title: formData.judul,
-                      category: formData.kategori,
-                      description: formData.deskripsi,
-                      tone: captionTone,
-                    })
-                  )
-                }
+                disabled={isGeneratingCaption}
+                className="h-11 rounded-2xl bg-amber-500 px-5 text-white hover:bg-amber-600 disabled:opacity-70"
+                onClick={handleGenerateCaption}
               >
-                Generate AI caption
+                {isGeneratingCaption ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" /> Menggenerate...
+                  </>
+                ) : (
+                  "Generate AI caption"
+                )}
               </Button>
-              
+
               <Dialog>
                 <DialogTrigger asChild>
                   <Button type="button" variant="outline" className="h-11 rounded-2xl border-amber-100" onClick={() => { setShowUploadModal(true); fetchUploadedFiles(); }}>
@@ -591,7 +684,7 @@ export function PortfolioManagerSection() {
                 </DialogContent>
               </Dialog>
 
-              {selectedPortfolio && (
+              {/* {selectedPortfolio && (
                 <Button
                   type="button"
                   variant="outline"
@@ -600,10 +693,10 @@ export function PortfolioManagerSection() {
                 >
                   Buat portfolio baru
                 </Button>
-              )}
+              )} */}
 
-              <Button 
-                onClick={handleSave} 
+              <Button
+                onClick={handleSave}
                 className="h-11 flex-1 rounded-2xl bg-slate-900 px-5 text-white hover:bg-slate-800"
               >
                 {selectedPortfolio ? "Simpan Perubahan" : "Simpan Portfolio Baru"}

@@ -21,16 +21,22 @@ export function BookingManagerSection() {
   const [loading, setLoading] = useState(false);
 
   const [clientName, setClientName] = useState("");
+  // Jenis event disembunyikan dari UI dulu, tapi tetap disimpan dengan default "Wedding"
   const [eventType, setEventType] = useState("Wedding");
-  const [packageName, setPackageName] = useState("");
+  const [packageId, setPackageId] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [status, setStatus] = useState("Pending");
   const [budget, setBudget] = useState("");
   const [catatan_admin, setcatatan_admin] = useState("");
   const [whatsapp, setWhatsapp] = useState(""); 
   const [isDone, setIsDone] = useState(false);
+
+  const [packages, setPackages] = useState<any[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(true);
+
   useEffect(() => {
     fetchBookings();
+    fetchPackages();
   }, []);
 
   async function fetchBookings() {
@@ -43,11 +49,28 @@ export function BookingManagerSection() {
     }
   }
 
+  async function fetchPackages() {
+    setLoadingPackages(true);
+    try {
+      const { data } = await supabase.from("packages").select("*").order("is_active", { ascending: false });
+      if (data) setPackages(data);
+    } finally {
+      setLoadingPackages(false);
+    }
+  }
+
+  // helper untuk nampilin nama package dari id, dipakai di card list booking
+  function getPackageName(id: string) {
+    if (!id) return "-";
+    const found = packages.find((p) => p.id === id);
+    return found?.nama_package ?? "-";
+  }
+
   const handleSelectBooking = (booking: any) => {
     setSelectedBooking(booking);
     setClientName(booking.nama_client ?? "");
     setEventType(booking.jenis_event ?? "Wedding");
-    setPackageName(booking.package_name ?? "");
+    setPackageId(booking.package_id ?? "");
     setEventDate(booking.tanggal_event ?? "");
     setStatus(booking.status ?? "Pending");
     setBudget(formatRupiah(String(booking.budget ?? "")));
@@ -65,6 +88,7 @@ export function BookingManagerSection() {
   const payload = {
     nama_client: clientName,
     jenis_event: eventType,
+    package_id: packageId || null,
     tanggal_event: eventDate,
     status: status,
     is_done: isDone,
@@ -118,7 +142,7 @@ const handleSaveSettings = async () => {
     setSelectedBooking("");
     setClientName("");
     setEventType("Wedding");
-    setPackageName("");
+    setPackageId("");
     setEventDate("");
     setStatus("Pending");
     setBudget("");
@@ -359,9 +383,7 @@ const fullDates = Object.entries(bookingsByDate).filter(
                       <span className={`text-sm ${archived ? "text-slate-400" : "text-emerald-700"}`}>{booking.status}</span>
                     </div>
 
-                    <p className={`text-sm ${archived ? "text-slate-400" : "text-slate-600"}`}>{booking.package_name}</p>
-
-                    <p className={`text-sm font-medium ${archived ? "text-slate-400" : "text-slate-500"}`}>{booking.jenis_event}</p>
+                    <p className={`text-sm ${archived ? "text-slate-400" : "text-slate-600"}`}>{getPackageName(booking.package_id)}</p>
 
                     <p className={`mt-1 text-sm ${archived ? "text-slate-400" : "text-slate-500"}`}>
                       {booking.tanggal_event
@@ -410,23 +432,29 @@ const fullDates = Object.entries(bookingsByDate).filter(
               />
             </Field>
 
-            <Field label="Jenis event">
+            {/* Jenis event disembunyikan dulu dari UI, state tetap dipakai (default "Wedding") saat disimpan */}
+
+            <Field label="Package dipilih">
               <select
-                value={eventType}
-                onChange={(event) => setEventType(event.target.value as "Wedding" | "Wisuda" | "Custom")}
+                value={packageId}
+                onChange={(event) => setPackageId(event.target.value)}
+                disabled={loadingPackages}
                 className="w-full rounded-2xl border border-slate-200 bg-emerald-50/30 px-4 py-3 text-sm outline-none transition-colors hover:border-emerald-300 focus:border-emerald-400"
               >
-                <option>Wedding</option>
-                <option>Wisuda</option>
-                <option>Custom</option>
+                <option value="">{loadingPackages ? "Memuat package..." : "Pilih package"}</option>
+                {packages.map((pkg) => (
+                  <option key={pkg.id} value={pkg.id}>
+                    {pkg.nama_package}{pkg.is_active === false ? " (nonaktif)" : ""}
+                  </option>
+                ))}
               </select>
             </Field>
 
-            <Field label="Package dipilih">
+            <Field label="Budget">
               <input
-                value={packageName}
-                onChange={(event) => setPackageName(event.target.value)}
-                placeholder="Wedding Luxury"
+                value={budget}
+                onChange={(event) => setBudget(formatRupiah(event.target.value))}
+                placeholder="Rp3.250.000"
                 className="w-full rounded-2xl border border-slate-200 bg-emerald-50/30 px-4 py-3 text-sm outline-none transition-colors hover:border-emerald-300 focus:border-emerald-400"
               />
             </Field>
@@ -435,7 +463,7 @@ const fullDates = Object.entries(bookingsByDate).filter(
               <input
                 value={eventDate}
                 onChange={(event) => setEventDate(event.target.value)}
-                placeholder="12 Juli 2026"
+                type="date"
                 className="w-full rounded-2xl border border-slate-200 bg-emerald-50/30 px-4 py-3 text-sm outline-none transition-colors hover:border-emerald-300 focus:border-emerald-400"
               />
             </Field>
@@ -450,15 +478,6 @@ const fullDates = Object.entries(bookingsByDate).filter(
                 <option>Confirmed</option>
                 <option>Follow Up</option>
               </select>
-            </Field>
-
-            <Field label="Budget">
-              <input
-                value={budget}
-                onChange={(event) => setBudget(formatRupiah(event.target.value))}
-                placeholder="Rp3.250.000"
-                className="w-full rounded-2xl border border-slate-200 bg-emerald-50/30 px-4 py-3 text-sm outline-none transition-colors hover:border-emerald-300 focus:border-emerald-400"
-              />
             </Field>
 
             <div className="sm:col-span-2">
@@ -520,4 +539,3 @@ function Field({
     </label>
   );
 }
-
