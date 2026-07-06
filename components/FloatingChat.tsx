@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 // import { sendAnalyticsEvent } from "@/components/AnalyticsTracker";
+import { chatWithAI } from "@/app/actions/chat-action";
 
 type Message = { id: number; text: string; sender: "user" | "ai"; image?: string };
 
@@ -35,50 +36,95 @@ export function FloatingChat() {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
   }, [messages, isTyping]);
 
+  // const handleSend = async () => {
+  //   if (!input.trim() && !imagePreview) return;
+
+  //   const userMsg: Message = {
+  //     id: Date.now(),
+  //     text: input,
+  //     sender: "user",
+  //     image: imagePreview || undefined,
+  //   };
+
+  //   setMessages((prev) => [...prev, userMsg]);
+  //   setInput("");
+  //   setImagePreview(null);
+  //   setIsTyping(true);
+
+  //   try {
+  //     const response = await fetch("/api/assistant", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         message: input,
+  //         session_id: typeof window !== "undefined" ? sessionStorage.getItem("analytics-session-id") : null,
+  //         visitor_id: typeof window !== "undefined" ? localStorage.getItem("analytics-visitor-id") : null,
+  //         page: "/assistant",
+  //       }),
+  //     });
+
+  //     const data = await response.json();
+  //     const aiText = data?.answer ?? "Maaf, saya belum bisa menjawab itu saat ini.";
+  //     const aiMsg: Message = { id: Date.now() + 1, text: aiText, sender: "ai" };
+  //     setMessages((prev) => [...prev, aiMsg]);
+  //   } catch (error) {
+  //     const aiMsg: Message = {
+  //       id: Date.now() + 1,
+  //       text: "Terjadi kesalahan saat mengambil jawaban. Silakan coba lagi.",
+  //       sender: "ai",
+  //     };
+  //     setMessages((prev) => [...prev, aiMsg]);
+  //   } finally {
+  //     setIsTyping(false);
+  //   }
+  // };
+
   const handleSend = async () => {
-    if (!input.trim() && !imagePreview) return;
+  if (!input.trim() && !imagePreview) return;
 
-    const userMsg: Message = {
-      id: Date.now(),
-      text: input,
-      sender: "user",
-      image: imagePreview || undefined,
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setImagePreview(null);
-    setIsTyping(true);
-
-    try {
-      const response = await fetch("/api/assistant", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: input,
-          session_id: typeof window !== "undefined" ? sessionStorage.getItem("analytics-session-id") : null,
-          visitor_id: typeof window !== "undefined" ? localStorage.getItem("analytics-visitor-id") : null,
-          page: "/assistant",
-        }),
-      });
-
-      const data = await response.json();
-      const aiText = data?.answer ?? "Maaf, saya belum bisa menjawab itu saat ini.";
-      const aiMsg: Message = { id: Date.now() + 1, text: aiText, sender: "ai" };
-      setMessages((prev) => [...prev, aiMsg]);
-    } catch (error) {
-      const aiMsg: Message = {
-        id: Date.now() + 1,
-        text: "Terjadi kesalahan saat mengambil jawaban. Silakan coba lagi.",
-        sender: "ai",
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-    } finally {
-      setIsTyping(false);
-    }
+  const userMsg: Message = {
+    id: Date.now(),
+    text: input,
+    sender: "user",
+    image: imagePreview || undefined,
   };
+
+  setMessages((prev) => [...prev, userMsg]);
+  setInput("");
+  setImagePreview(null);
+  setIsTyping(true);
+
+  try {
+    const aiResponse = await chatWithAI(input, userMsg.image);
+    
+    const aiMsg: Message = { id: Date.now() + 1, text: aiResponse, sender: "ai" };
+    setMessages((prev) => [...prev, aiMsg]);
+
+    fetch("/api/assistant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: input,
+        ai_response: aiResponse, 
+        session_id: typeof window !== "undefined" ? sessionStorage.getItem("analytics-session-id") : null,
+        visitor_id: typeof window !== "undefined" ? localStorage.getItem("analytics-visitor-id") : null,
+        page: "/assistant",
+      }),
+    }).catch(err => console.error("Gagal log ke analytics:", err));
+
+  } catch (error) {
+    console.error("AI Error:", error);
+    setMessages((prev) => [...prev, { 
+      id: Date.now() + 1, 
+      text: "Maaf, sistem sedang gangguan/sibuk.", 
+      sender: "ai" 
+    }]);
+  } finally {
+    setIsTyping(false);
+  }
+};
 
   const handleImageUpload = (file: File) => {
     const reader = new FileReader();
