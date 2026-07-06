@@ -210,49 +210,43 @@ const handleSeeRecommendation = async () => {
     (step === 4 && (!selectedLocation || !selectedDuration)) ||
     (step === 5 && !selectedTimeline);
 
- const recommendedPackage = (() => {
-  if (!packages.length) return null;
+const recommendedPackage = (() => {
+    if (!packages.length) return null;
 
-  const serviceMap: Record<string, string> = {
-    photo: "Photography",
-    video: "Videography",
-    social: "Social Media",
-    food: "Food",
-  };
+    const keywords: string[] = [];
+    
+    if (selectedEvent === "wedding") keywords.push("wedding", "pernikahan", "prewed", "engagement");
+    if (selectedEvent === "wisuda") keywords.push("wisuda", "graduation");
+    if (selectedEvent === "corporate") keywords.push("corporate", "produk", "komersial", "bisnis", "company");
+    if (selectedEvent === "personal") keywords.push("personal", "branding", "portrait", "family", "solo");
+    
+    if (selectedType === "food") keywords.push("food", "makanan", "kuliner");
+    if (selectedType === "video") keywords.push("video", "videografi");
 
-  const selectedCategory = serviceMap[selectedType];
+    const matchedPackages = packages.filter((pkg) => {
+      const textToSearch = `${pkg.kategori} ${pkg.nama_package}`.toLowerCase();
+      return keywords.some((kw) => textToSearch.includes(kw));
+    });
 
-  // filter kategori dulu
-  const categoryPackages = packages.filter(
-    (pkg) => pkg.kategori === selectedCategory
-  );
+    const pool = matchedPackages.length > 0 ? matchedPackages : packages;
 
-  const pool = categoryPackages.length ? categoryPackages : packages;
+    const inRange = pool.filter(
+      (pkg) => pkg.harga >= minharga && pkg.harga <= maxharga
+    );
 
-  // cr package yang masuk dalam range budget
-  const inRange = pool.filter(
-    (pkg) => pkg.harga >= minharga && pkg.harga <= maxharga
-  );
+    if (inRange.length > 0) {
+      return inRange.sort((a, b) => b.harga - a.harga)[0];
+    }
 
-  // klo ada yang masuk range, ambil yang paling murah
-  if (inRange.length) {
-    return inRange.sort((a, b) => a.harga - b.harga)[0];
-  }
+    return pool.reduce((closest, pkg) => {
+      const currentDistance =
+        pkg.harga < minharga ? minharga - pkg.harga : pkg.harga - maxharga;
+      const closestDistance =
+        closest.harga < minharga ? minharga - closest.harga : closest.harga - maxharga;
 
-  return pool.reduce((closest, pkg) => {
-    const currentDistance =
-      pkg.harga < minharga
-        ? minharga - pkg.harga
-        : pkg.harga - maxharga;
-
-    const closestDistance =
-      closest.harga < minharga
-        ? minharga - closest.harga
-        : closest.harga - maxharga;
-
-    return currentDistance < closestDistance ? pkg : closest;
-  });
-})();
+      return currentDistance < closestDistance ? pkg : closest;
+    });
+  })();
 
 const handleSubmitClientNeeds = async (payload: any) => {
   const { data, error } = await supabase
