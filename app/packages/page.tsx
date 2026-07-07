@@ -274,10 +274,10 @@ const handleSubmitClientNeeds = async (payload: any) => {
             </p>
             <h1 className="mt-3 text-5xl font-bold tracking-tight text-slate-950 sm:text-6xl">
               Daftar package yang
-              <span className="block text-sky-600">siap dipilih calon client.</span>
+              <span className="block text-sky-600">siap dipilih olehmu.</span>
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
-              Semua paket disusun untuk memudahkan calon client membandingkan harga, kebutuhan coverage, dan hasil akhir tanpa harus chat panjang dulu.
+              Pilih paket yang paling cocok untuk momenmu.
             </p>
           </div>
 

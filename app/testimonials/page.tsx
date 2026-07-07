@@ -31,7 +31,7 @@ export default async function TestimonialsPage() {
             <span className="block text-rose-500">booking dan sesi selesai.</span>
           </h1>
           <p className="mt-5 text-base leading-7 text-slate-600">
-            Halaman ini dipisah dari jasa dan biaya supaya calon client bisa fokus melihat social proof tanpa tercampur daftar paket.
+           Pengalaman nyata dari client yang sudah mempercayakan momen spesialnya bersama kami.
           </p>
         </div>
       </section>

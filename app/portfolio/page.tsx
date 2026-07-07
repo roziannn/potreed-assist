@@ -49,7 +49,7 @@ export default function PortfolioPage() {
             <span className="block text-amber-600">membayangkan hasil akhirnya.</span>
           </h1>
           <p className="mt-5 text-base leading-7 text-slate-600">
-            Halaman ini dibuat untuk memperlihatkan arah visual studio dengan layout yang tetap ringan di ponsel dan terasa lebih editorial di desktop.
+           Kumpulan momen yang pernah kami abadikan. Temukan referensi yang paling sesuai dengan momen spesialmu.
           </p>
         </div>
       </section>
