@@ -198,6 +198,9 @@ const deskripsiItems = formData.deskripsi_singkat
             >
               <option>Wedding</option>
               <option>Wisuda</option>
+              <option>Engagement</option>
+              <option>Korporat/Produk</option>
+              <option>Custom</option>
             </select>
           </Field>
 
