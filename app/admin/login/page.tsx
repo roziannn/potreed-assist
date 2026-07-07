@@ -27,7 +27,7 @@ export default async function AdminLoginPage() {
         <section className="rounded-[2.25rem] border border-white/70 bg-white/85 p-6 shadow-[0_30px_120px_-54px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:p-8">
           <p className="text-sm font-medium text-slate-500">Demo credential</p>
           <p className="mt-1 text-sm leading-6 text-slate-600">
-            Email: <span className="font-semibold text-slate-900">admin@potreed.ai</span>
+            Email: <span className="font-semibold text-slate-900">admin@potreed.com</span>
             <br />
             Password: <span className="font-semibold text-slate-900">admin12345</span>
           </p>

@@ -1,46 +1,39 @@
 import "server-only";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
-const SESSION_COOKIE = "potreed-admin-session";
+export async function getAdminSession() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-const adminCredentials = {
-  email: process.env.ADMIN_EMAIL ?? "admin@potreed.ai",
-  password: process.env.ADMIN_PASSWORD ?? "admin12345",
-};
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, email")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") return null;
+
+  return { user, profile };
+}
 
 export async function isAdminAuthenticated() {
-  const cookieStore = await cookies();
-  return cookieStore.get(SESSION_COOKIE)?.value === "authenticated";
+  const session = await getAdminSession();
+  return session !== null;
 }
 
 export async function requireAdminSession() {
-  const authenticated = await isAdminAuthenticated();
-  if (!authenticated) {
+  const session = await getAdminSession();
+  if (!session) {
     redirect("/admin/login");
   }
-}
-
-export async function createAdminSession() {
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, "authenticated", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 8,
-  });
+  return session;
 }
 
 export async function clearAdminSession() {
-  const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE);
-}
-
-export function validateAdminCredentials(email: string, password: string) {
-  return (
-    email.trim().toLowerCase() === adminCredentials.email.toLowerCase() &&
-    password === adminCredentials.password
-  );
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
 }

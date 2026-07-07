@@ -1,40 +1,43 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import {
-  clearAdminSession,
-  createAdminSession,
-  validateAdminCredentials,
-} from "@/lib/auth";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
-export type LoginFormState = {
-  error?: string;
-};
+export type LoginFormState = { error?: string; success?: boolean };
 
 export async function loginAdmin(
   _prevState: LoginFormState,
   formData: FormData
 ): Promise<LoginFormState> {
-  const email = String(formData.get("email") ?? "");
-  const password = String(formData.get("password") ?? "");
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+  const supabase = await createSupabaseServerClient();
 
-  if (!email || !password) {
-    return {
-      error: "Email dan password admin masih wajib diisi.",
-    };
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error || !data.user) {
+    return { error: "Email atau password salah." };
   }
 
-  if (!validateAdminCredentials(email, password)) {
-    return {
-      error: "Kredensial admin belum cocok. Coba cek lagi email atau password-nya.",
-    };
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", data.user.id)
+    .single();
+
+  if (profile?.role !== "admin") {
+    await supabase.auth.signOut();
+    return { error: "Akun ini tidak memiliki akses admin." };
   }
 
-  await createAdminSession();
-  redirect("/admin/dashboard?toast=login-success");
+  return { success: true };
 }
 
 export async function logoutAdmin() {
-  await clearAdminSession();
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
   redirect("/admin/login");
 }

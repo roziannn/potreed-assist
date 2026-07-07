@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, LockKeyhole, Mail } from "lucide-react";
 import { loginAdmin, type LoginFormState } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
@@ -11,12 +12,23 @@ const initialState: LoginFormState = {};
 export function AdminLoginForm() {
   const [state, action, pending] = useActionState(loginAdmin, initialState);
   const { showToast } = useToast();
+  const router = useRouter();
+  const hasSubmitted = useRef(false);
 
   useEffect(() => {
     if (state.error) {
       showToast("Login gagal", state.error, "error");
+      hasSubmitted.current = true;
     }
   }, [showToast, state.error]);
+
+  useEffect(() => {
+    if (hasSubmitted.current && !state.error) return;
+    if (!pending && state !== initialState && !state.error) {
+      router.push("/admin/dashboard");
+      router.refresh();
+    }
+  }, [state, pending, router]);
 
   return (
     <form action={action} className="space-y-5">
@@ -30,7 +42,7 @@ export function AdminLoginForm() {
             id="email"
             name="email"
             type="email"
-            placeholder="admin@potreed.ai"
+            placeholder="admin@potreed.com"
             className="w-full bg-transparent text-sm text-slate-900 outline-none"
             required
           />
