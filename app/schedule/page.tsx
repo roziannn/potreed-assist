@@ -54,17 +54,17 @@ export default function SchedulePage() {
     {
       id: "wisuda" as const,
       label: "Wisuda",
-      description: "Sesi wisuda formal dengan styling dan portofolio profesional.",
+      description: "Graduation, School, Academic",
     },
     {
       id: "wedding" as const,
       label: "Wedding",
-      description: "Sesi wedding penuh cerita, mood, dan dokumentasi lengkap.",
+      description: "Wedding, Engagement, Prewedding",
     },
     {
       id: "custom" as const,
       label: "Custom Event",
-      description: "Acara korporat, prewedding, atau konsep kreatif custom.",
+      description: "Acara korporat, atau konsep kreatif custom.",
     },
   ];
 

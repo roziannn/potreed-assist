@@ -4,6 +4,7 @@ import { ConsultationModal } from "@/components/ConsultationModal";
 import { supabase } from "@/lib/supabase";
 import { ArrowRight, Flame, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { Footer } from "@/components/Footer";
 
 type PortfolioSnapshot = {
   id: string;
@@ -85,7 +86,9 @@ export default async function LandingPage() {
               Konsultasi Gratis
             </a>
           </div>
+
         </div>
+
 
         <div className="rounded-[2.25rem] border border-white/70 bg-white/75 p-4 shadow-[0_30px_120px_-48px_rgba(14,116,144,0.42)] backdrop-blur-xl">
           <div className="rounded-[1.8rem] bg-[linear-gradient(145deg,_rgba(14,165,233,0.16),_rgba(255,255,255,0.95)_55%,_rgba(251,191,36,0.12))] p-5">
@@ -121,28 +124,7 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
-
       <ConsultationModal />
-{/* 
-      <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <div className="grid gap-6 rounded-[2.25rem] border border-white/70 bg-white/70 p-6 shadow-[0_24px_100px_-55px_rgba(15,23,42,0.45)] backdrop-blur-xl lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div>
-            <p className="text-sm font-medium text-amber-700">Potreed Social Preview</p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-              Social proof yang tetap terasa premium
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-              Area ini sekarang lebih aman untuk mobile dan bisa dipakai nanti untuk embed Instagram, TikTok, atau reels teaser tanpa membuat layout utama patah di layar kecil.
-            </p>
-          </div>
-          <div className="rounded-[1.8rem] border border-amber-100 bg-[linear-gradient(160deg,_rgba(255,255,255,0.92),_rgba(254,243,199,0.72))] p-5">
-            <p className="text-sm font-semibold text-slate-900">Preview embed</p>
-            <div className="mt-4 flex aspect-[4/5] items-center justify-center rounded-[1.5rem] border border-dashed border-amber-200 bg-white/80 px-6 text-center text-sm leading-6 text-slate-500">
-              Tempat aman untuk embed social media post tanpa merusak responsivitas halaman.
-            </div>
-          </div>
-        </div>
-      </section> */}
     </main>
   );
 }

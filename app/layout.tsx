@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 import "./globals.css";
+import { Footer } from "@/components/Footer";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -29,6 +30,8 @@ export default function RootLayout({
           <AnalyticsTracker />
           {children}
         </ToastProvider>
+          <Footer />
+
       </body>
     </html>
   );
